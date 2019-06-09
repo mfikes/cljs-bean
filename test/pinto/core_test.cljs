@@ -118,7 +118,10 @@
 
 (deftest reduce-kv-test
   (is (= {1 :a, 2 :b, 3 :c}
-        (reduce-kv #(assoc %1 %3 %2) {} (bean #js {:a 1 :b 2 :c 3})))))
+        (reduce-kv #(assoc %1 %3 %2) {} (bean #js {:a 1 :b 2 :c 3}))))
+  (is (= 1 (reduce-kv (fn [r k v] (reduced v))
+             nil
+             (bean #js {:a 1})))))
 
 (deftest reduce-test
   (is (= [:a 1 :b 2 :c 3]

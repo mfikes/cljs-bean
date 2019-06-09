@@ -102,7 +102,15 @@
 
   IKVReduce
   (-kv-reduce [_ f init]
-    (-kv-reduce (snapshot obj) f init))
+    (try
+      (let [result (volatile! init)]
+        (gobj/forEach obj
+          (fn [v k _]
+            (let [r (vswap! result f (prop->key k) v)]
+              (when (reduced? r) (throw r)))))
+        @result)
+      (catch :default x
+        (if (reduced? x) @x (throw x)))))
 
   IReduce
   (-reduce [_ f]
