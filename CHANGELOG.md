@@ -2,6 +2,8 @@
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
 ## [Unreleased]
+### Changed
+- Make the `Bean` `deftype` be private ([#4](https://github.com/mfikes/cljs-bean/pull/4))
 
 ## [0.2.0] - 2019-06-10
 ### Changed

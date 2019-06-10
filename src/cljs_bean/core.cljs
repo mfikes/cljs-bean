@@ -22,7 +22,7 @@
     (gobj/forEach x (fn [v k _] (vswap! result assoc! (prop->key k) v)))
     (persistent! @result)))
 
-(deftype Bean [meta obj ^:mutable __hash]
+(deftype ^:private Bean [meta obj ^:mutable __hash]
   Object
   (toString [coll]
     (pr-str* coll))
