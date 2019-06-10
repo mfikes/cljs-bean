@@ -1,4 +1,4 @@
-(ns pinto.core
+(ns cljs-bean.core
   (:require
    [goog.object :as gobj]))
 

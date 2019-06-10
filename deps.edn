@@ -10,10 +10,10 @@
                                   {:git/url "https://github.com/juxt/pack.alpha.git"
                                    :sha     "8acf80dd4d6e5173585f5c6fec7af28a310f3ed7"}}
                      :main-opts  ["-m" "mach.pack.alpha.skinny" "--no-libs"
-                                  "--project-path" "pinto.jar"]}
+                                  "--project-path" "cljs-bean.jar"]}
          :install   {:extra-deps {deps-deploy {:mvn/version "RELEASE"}}
                      :main-opts  ["-m" "deps-deploy.deps-deploy" "install"
-                                  "pinto.jar"]}
+                                  "cljs-bean.jar"]}
          :deploy    {:extra-deps {deps-deploy {:mvn/version "RELEASE"}}
                      :main-opts  ["-m" "deps-deploy.deps-deploy" "deploy"
-                                  "pinto.jar"]}}}
+                                  "cljs-bean.jar"]}}}
