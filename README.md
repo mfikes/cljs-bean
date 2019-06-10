@@ -16,7 +16,7 @@ The `bean` function produces a thin wrapper over JavaScript objects, implementin
 This lets you interoperate with JavaScript objects in an idiomatic fashion, while being an order of magnitude faster than equivalent constructs using `js->clj`:
 
 ```clojure
-(let [{:keys [a b]} (bean obj)]
+(let [{:keys [a b]} (bean #js {:a 1, :b 2})]
   (+ a b))
 ```
 
