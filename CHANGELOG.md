@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file. This change
 
 ## [Unreleased]
 
+### Changed
+- Faster `reduce-kv` ([#2](https://github.com/mfikes/pinto/pull/2))
+
 ## [0.1.0] - 2019-06-09
 ### Added
 - Initial release.
