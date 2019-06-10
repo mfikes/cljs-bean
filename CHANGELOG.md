@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file. This change
 
 ## [Unreleased]
 ### Changed
-- Make the `Bean` `deftype` be private ([#3](https://github.com/mfikes/cljs-bean/pull/3))
+- Make the `Bean` `deftype` be private ([#4](https://github.com/mfikes/cljs-bean/pull/4))
 
 ## [0.2.0] - 2019-06-10
 ### Changed
