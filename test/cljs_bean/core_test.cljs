@@ -1,7 +1,7 @@
-(ns pinto.core-test
+(ns cljs-bean.core-test
   (:require
    [clojure.test :refer [are deftest is]]
-   [pinto.core :refer [bean]]))
+   [cljs-bean.core :refer [bean]]))
 
 (def color-black
   #js {:red          0

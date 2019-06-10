@@ -1,13 +1,13 @@
-# Pinto
+# CLJS Bean
 
 Like `clojure.core/bean`, but for ClojureScript.
 
-[![Clojars Project](https://img.shields.io/clojars/v/pinto.svg)](https://clojars.org/pinto) [![Build Status](https://travis-ci.org/mfikes/pinto.svg?branch=master)](https://travis-ci.org/mfikes/pinto)
+[![Clojars Project](https://img.shields.io/clojars/v/cljs-bean.svg)](https://clojars.org/cljs-bean) [![Build Status](https://travis-ci.org/mfikes/cljs-bean.svg?branch=master)](https://travis-ci.org/mfikes/cljs-bean)
 
 The `bean` function produces a thin wrapper over JavaScript objects, implementing the map abstraction:
 
 ```clojure
-(require '[pinto.core :refer [bean]])
+(require '[cljs-bean.core :refer [bean]])
 
 (bean #js {:a 1, :b 2})
 ;; => {:a 1, :b 2}
