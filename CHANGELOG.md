@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file. This change
 ## [Unreleased]
 
 ### Changed
+- Revise project name to “CLJS Bean” ([#1](https://github.com/mfikes/cljs-bean/issues/1))
 - Faster `reduce-kv` ([#2](https://github.com/mfikes/cljs-bean/pull/2))
 
 ## [0.1.0] - 2019-06-09
