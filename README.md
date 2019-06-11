@@ -55,6 +55,6 @@ keywords are used only if properties can be represented as simple keywords:
     (and (string? key) (string? (prop->key key))) key
     :else nil))
 
-(bean #js {:a 1, :b 2, "c/d" 3, "e f" 4} :prop->key prop->key :key->prop :key->prop)
+(bean #js {:a 1, :b 2, "c/d" 3, "e f" 4} :prop->key prop->key :key->prop key->prop)
 ;; => {:a 1, :b 2, "c/d" 3, "e f" 4}
 ```
