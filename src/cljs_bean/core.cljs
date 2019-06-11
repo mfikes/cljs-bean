@@ -115,8 +115,8 @@
   IReduce
   (-reduce [_ f]
     (-reduce (snapshot obj) f))
-  (-reduce [_ f start]
-    (-reduce (snapshot obj) f start))
+  (-reduce [coll f start]
+    (-kv-reduce coll (fn [r k v] (f r (MapEntry. k v nil))) start))
 
   IFn
   (-invoke [coll k]

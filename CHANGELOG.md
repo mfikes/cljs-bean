@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file. This change
 ## [Unreleased]
 ### Changed
 - Make the `Bean` `deftype` be private ([#4](https://github.com/mfikes/cljs-bean/pull/4))
+- Faster 3-arity `reduce` by delegating to `reduce-kv` ([#5](https://github.com/mfikes/cljs-bean/pull/5))
 
 ## [0.2.0] - 2019-06-10
 ### Changed
