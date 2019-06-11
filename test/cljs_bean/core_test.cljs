@@ -89,6 +89,7 @@
     (is (= [:a 1] (.next i)))))
 
 (deftest seq-test
+  (is (nil? (seq (bean #js {}))))
   (is (= [[:a 1]] (seq (bean #js {:a 1}))))
   (is (= [:a] (keys (seq (bean #js {:a 1})))))
   (is (= [1] (vals (seq (bean #js {:a 1}))))))
