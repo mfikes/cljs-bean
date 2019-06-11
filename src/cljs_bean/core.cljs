@@ -22,6 +22,13 @@
     (gobj/forEach x (fn [v k _] (vswap! result assoc! (prop->key k) v)))
     (persistent! @result)))
 
+(defn- thisfn [obj ks]
+  (lazy-seq
+    (when-let [ks (seq ks)]
+      (let [first-ks (first ks)]
+        (cons (MapEntry. (prop->key first-ks) (unchecked-get obj first-ks) nil)
+          (thisfn obj (rest ks)))))))
+
 (deftype ^:private Bean [meta obj ^:mutable __hash]
   Object
   (toString [coll]
@@ -75,7 +82,7 @@
 
   ISeqable
   (-seq [_]
-    (-seq (snapshot obj)))
+    (thisfn obj (js-keys obj)))
 
   IAssociative
   (-assoc [_ k v]
