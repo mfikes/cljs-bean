@@ -137,12 +137,22 @@
 (deftest seq-test
   (is (nil? (seq (bean #js {}))))
   (is (nil? (seq (bean #js {} :keywordize-keys false))))
+  (is (= () (rest (seq (bean #js {})))))
   (is (= [[:a 1]] (seq (bean #js {:a 1}))))
+  (is (map-entry? (first (seq (bean #js {:a 1})))))
+  (is (nil? (next (seq (bean #js {:a 1})))))
+  (is (= () (rest (seq (bean #js {:a 1})))))
   (is (= [["a" 1]] (seq (bean #js {:a 1} :keywordize-keys false))))
   (is (= [:a] (keys (seq (bean #js {:a 1})))))
   (is (= ["a"] (keys (seq (bean #js {:a 1} :keywordize-keys false)))))
   (is (= [1] (vals (seq (bean #js {:a 1})))))
   (is (= [1] (vals (seq (bean #js {:a 1} :keywordize-keys false))))))
+
+(deftest count-test
+  (is (not (counted? (bean #js {:a 1}))))
+  (is (== 0 (count (bean #js {}))))
+  (is (== 1 (count (bean #js {:a 1}))))
+  (is (== 2 (count (bean #js {:a 1, :b 2})))))
 
 (deftest assoc-test
   (let [b (bean #js {:x 1})
@@ -201,3 +211,148 @@
 
 (deftest editable-collection-test
   (is (= {:a 1, :b 2} (persistent! (assoc! (transient (bean #js {:a 1})) :b 2)))))
+
+(deftest seq-dot-toString-test
+  (is (= "([:a 1])" (.toString (seq (bean #js {:a 1})))))
+  (is (= "([\"a\" 1])" (.toString (seq (bean #js {:a 1} :keywordize-keys false)))))
+  (is (= "([:a 1])" (.toString (seq (bean #js {:a 1} :prop->key prop->key :key->prop key->prop)))))
+  (is (= "([:a/b 1])" (.toString (seq (bean #js {"a/b" 1})))))
+  (is (= "([\"a/b\" 1])" (.toString (seq (bean #js {"a/b" 1} :keywordize-keys false)))))
+  (is (= "([\"a/b\" 1])" (.toString (seq (bean #js {"a/b" 1} :prop->key prop->key :key->prop key->prop))))))
+
+(deftest seq-dot-equiv-test
+  (is (.equiv (seq (bean #js {:a 1})) [[:a 1]]))
+  (is (.equiv (seq (bean #js {:a 1} :keywordize-keys false)) [["a" 1]]))
+  (is (.equiv (seq (bean #js {:a 1} :prop->key prop->key :key->prop key->prop)) [[:a 1]]))
+  (is (.equiv (seq (bean #js {"a/b" 1})) [[:a/b 1]]))
+  (is (.equiv (seq (bean #js {"a/b" 1} :keywordize-keys false)) [["a/b" 1]]))
+  (is (.equiv (seq (bean #js {"a/b" 1} :prop->key prop->key :key->prop key->prop)) [["a/b" 1]])))
+
+(deftest seq-dot-indexOf-test
+  (is (zero? (.indexOf (seq (bean #js {:a 1})) [:a 1])))
+  (is (zero? (.indexOf (seq (bean #js {:a 1})) [:a 1] 0)))
+  (is (== -1 (.indexOf (seq (bean #js {:a 1})) [:a 2])))
+  (is (== -1 (.indexOf (seq (bean #js {:a 1})) [:a 1] 1)))
+  (is (zero? (.indexOf (seq (bean #js {:a 1} :keywordize-keys false)) ["a" 1])))
+  (is (zero? (.indexOf (seq (bean #js {:a 1} :keywordize-keys false)) ["a" 1] 0)))
+  (is (== -1 (.indexOf (seq (bean #js {:a 1} :keywordize-keys false)) ["a" 2])))
+  (is (== -1 (.indexOf (seq (bean #js {:a 1} :keywordize-keys false)) ["a" 1] 1)))
+  (is (zero? (.indexOf (seq (bean #js {:a 1} :prop->key prop->key :key->prop key->prop)) [:a 1])))
+  (is (zero? (.indexOf (seq (bean #js {:a 1} :prop->key prop->key :key->prop key->prop)) [:a 1] 0)))
+  (is (== -1 (.indexOf (seq (bean #js {:a 1} :prop->key prop->key :key->prop key->prop)) [:a 2])))
+  (is (== -1 (.indexOf (seq (bean #js {:a 1} :prop->key prop->key :key->prop key->prop)) [:a 1] 1)))
+  (is (zero? (.indexOf (seq (bean #js {"a/b" 1})) [:a/b 1])))
+  (is (zero? (.indexOf (seq (bean #js {"a/b" 1})) [:a/b 1] 0)))
+  (is (== -1 (.indexOf (seq (bean #js {"a/b" 1})) [:a/b 2])))
+  (is (== -1 (.indexOf (seq (bean #js {"a/b" 1})) [:a/b 1] 1)))
+  (is (zero? (.indexOf (seq (bean #js {"a/b" 1} :keywordize-keys false)) ["a/b" 1])))
+  (is (zero? (.indexOf (seq (bean #js {"a/b" 1} :keywordize-keys false)) ["a/b" 1] 0)))
+  (is (== -1 (.indexOf (seq (bean #js {"a/b" 1} :keywordize-keys false)) ["a/b" 2])))
+  (is (== -1 (.indexOf (seq (bean #js {"a/b" 1} :keywordize-keys false)) ["a/b" 1] 1)))
+  (is (zero? (.indexOf (seq (bean #js {"a/b" 1} :prop->key prop->key :key->prop key->prop)) ["a/b" 1])))
+  (is (zero? (.indexOf (seq (bean #js {"a/b" 1} :prop->key prop->key :key->prop key->prop)) ["a/b" 1] 0)))
+  (is (== -1 (.indexOf (seq (bean #js {"a/b" 1} :prop->key prop->key :key->prop key->prop)) ["a/b" 2])))
+  (is (== -1 (.indexOf (seq (bean #js {"a/b" 1} :prop->key prop->key :key->prop key->prop)) ["a/b" 1] 1))))
+
+(deftest seq-dot-lastIndexOf-test
+  (is (zero? (.lastIndexOf (seq (bean #js {:a 1})) [:a 1])))
+  (is (zero? (.lastIndexOf (seq (bean #js {:a 1})) [:a 1] 1)))
+  (is (== -1 (.lastIndexOf (seq (bean #js {:a 1})) [:a 2])))
+  (is (zero? (.lastIndexOf (seq (bean #js {:a 1} :keywordize-keys false)) ["a" 1])))
+  (is (zero? (.lastIndexOf (seq (bean #js {:a 1} :keywordize-keys false)) ["a" 1] 1)))
+  (is (== -1 (.lastIndexOf (seq (bean #js {:a 1} :keywordize-keys false)) ["a" 2])))
+  (is (zero? (.lastIndexOf (seq (bean #js {:a 1} :prop->key prop->key :key->prop key->prop)) [:a 1])))
+  (is (zero? (.lastIndexOf (seq (bean #js {:a 1} :prop->key prop->key :key->prop key->prop)) [:a 1] 1)))
+  (is (== -1 (.lastIndexOf (seq (bean #js {:a 1} :prop->key prop->key :key->prop key->prop)) [:a 2])))
+  (is (zero? (.lastIndexOf (seq (bean #js {"a/b" 1})) [:a/b 1])))
+  (is (zero? (.lastIndexOf (seq (bean #js {"a/b" 1})) [:a/b 1] 1)))
+  (is (== -1 (.lastIndexOf (seq (bean #js {"a/b" 1})) [:a/b 2])))
+  (is (zero? (.lastIndexOf (seq (bean #js {"a/b" 1} :keywordize-keys false)) ["a/b" 1])))
+  (is (zero? (.lastIndexOf (seq (bean #js {"a/b" 1} :keywordize-keys false)) ["a/b" 1] 1)))
+  (is (== -1 (.lastIndexOf (seq (bean #js {"a/b" 1} :keywordize-keys false)) ["a/b" 2])))
+  (is (zero? (.lastIndexOf (seq (bean #js {"a/b" 1} :prop->key prop->key :key->prop key->prop)) ["a/b" 1])))
+  (is (zero? (.lastIndexOf (seq (bean #js {"a/b" 1} :prop->key prop->key :key->prop key->prop)) ["a/b" 1] 1)))
+  (is (== -1 (.lastIndexOf (seq (bean #js {"a/b" 1} :prop->key prop->key :key->prop key->prop)) ["a/b" 2]))))
+
+(deftest seq-clone-test
+  (let [s (seq (bean #js {:a 1}))
+        c (clone s)]
+    (is (= s c))
+    (is (not (identical? s c)))
+    (is (nil? (meta c))))
+  (let [s (seq (bean #js {:a 1} :keywordize-keys false))
+        c (clone s)]
+    (is (= s c))
+    (is (not (identical? s c)))
+    (is (nil? (meta c))))
+  (let [s (seq (bean #js {:a 1, "a/b" 2, "d e" 3} :prop->key prop->key :key->prop key->prop))
+        c (clone s)]
+    (is (= s c))
+    (is (not (identical? s c)))
+    (is (nil? (meta c))))
+  (let [s (with-meta (seq (bean #js {:a 1})) {:foo true})
+        c (clone s)]
+    (is (= s c))
+    (is (not (identical? s c)))
+    (is (= {:foo true} (meta c)))))
+
+(deftest seq-meta-test
+  (let [s (seq (bean #js {:a 1}))]
+    (= {:foo true} (meta (with-meta s {:foo true}))))
+  (let [s (seq (bean #js {:a 1} :keywordize-keys false))]
+    (= {:foo true} (meta (with-meta s {:foo true})))))
+
+(deftest seq-count-test
+  (is (counted? (seq (bean #js {:a 1}))))
+  (is (== 0 (count (seq (bean #js {})))))
+  (is (== 1 (count (seq (bean #js {:a 1})))))
+  (is (== 2 (count (seq (bean #js {:a 1, :b 2})))))
+  (is (counted? (rest (seq (bean #js {:a 1, :b 2})))))
+  (is (== 1 (count (rest (seq (bean #js {:a 1, :b 2})))))))
+
+(deftest seq-nth-test
+  (is (= [:a 1] (nth (seq (bean #js {:a 1})) 0)))
+  (is (thrown-with-msg? js/Error #"Index out of bounds" (nth (seq (bean #js {:a 1})) 1)))
+  (is (= ::not-found (nth (seq (bean #js {:a 1})) 1 ::not-found))))
+
+(deftest seq-equiv-test
+  (is (-equiv (seq (bean #js {:a 1})) [[:a 1]]))
+  (is (-equiv (seq (bean #js {:a 1} :keywordize-keys false)) [["a" 1]]))
+  (is (-equiv (seq (bean #js {:a 1} :prop->key prop->key :key->prop key->prop)) [[:a 1]]))
+  (is (-equiv (seq (bean #js {"a/b" 1})) [[:a/b 1]]))
+  (is (-equiv (seq (bean #js {"a/b" 1} :keywordize-keys false)) [["a/b" 1]]))
+  (is (-equiv (seq (bean #js {"a/b" 1} :prop->key prop->key :key->prop key->prop)) [["a/b" 1]])))
+
+(deftest seq-conj-test
+  (is (= [:x] (conj (seq (bean #js {})) :x)))
+  (is (= [:x [:a 1]] (conj (seq (bean #js {:a 1})) :x))))
+
+(deftest seq-empty-test
+  (is (= [] (empty (seq (bean #js {:a 1}))))))
+
+(deftest seq-reduce-test
+  (is (== 3 (reduce (fn [r e]
+                      (+ (cond-> r (map-entry? r) val) (val e)))
+              (seq (bean #js {:a 1, :b 2})))))
+  (is (== :empty (reduce (fn []
+                           :empty)
+                   (seq (bean #js {})))))
+  (is (== 7 (reduce (fn [r e]
+                      (reduced 7))
+              (seq (bean #js {:a 1, :b 2})))))
+  (is (== 3 (reduce (fn [r e]
+                      (+ r (val e)))
+              0
+              (seq (bean #js {:a 1, :b 2})))))
+  (is (== 0 (reduce (fn [r e]
+                      (+ r (val e)))
+              0
+              (seq (bean #js {})))))
+  (is (== 7 (reduce (fn [r e]
+                      (reduced 7))
+              0
+              (seq (bean #js {:a 1, :b 2}))))))
+
+(deftest seq-hash-test
+  (is (== (hash (seq {:a 1})) (hash (seq (bean #js {:a 1})))))
+  (is (== (hash (seq {"a" 1})) (hash (seq (bean #js {:a 1} :keywordize-keys false))))))
