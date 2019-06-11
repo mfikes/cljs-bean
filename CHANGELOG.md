@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file. This change
 
 ## [Unreleased]
 ### Changed
+- Ability to control how keys are mapped
 - Make the `Bean` `deftype` be private
 - Faster 3-arity `reduce` by delegating to `reduce-kv`
 - Faster `seq` when not consuming all
