@@ -9,12 +9,91 @@
     (gobj/forEach x (fn [v k _] (vswap! result assoc! (prop->key k) v)))
     (persistent! @result)))
 
-(defn- thisfn [obj ks prop->key]
-  (when-let [ks (seq ks)]
-    (let [first-ks (first ks)]
-      (lazy-seq
-        (cons (MapEntry. (prop->key first-ks) (unchecked-get obj first-ks) nil)
-          (thisfn obj (rest ks) prop->key))))))
+(defn- bean-seq-entry [obj prop->key arr i]
+  (let [prop (aget arr i)]
+    (MapEntry. (prop->key prop) (unchecked-get obj prop) nil)))
+
+(deftype ^:private BeanSeq [obj prop->key arr i meta]
+  Object
+  (toString [coll]
+    (pr-str* coll))
+  (equiv [this other]
+    (-equiv this other))
+  (indexOf [coll x]
+    (-indexOf coll x 0))
+  (indexOf [coll x start]
+    (-indexOf coll x start))
+  (lastIndexOf [coll x]
+    (-lastIndexOf coll x (count coll)))
+  (lastIndexOf [coll x start]
+    (-lastIndexOf coll x start))
+
+  ICloneable
+  (-clone [_] (BeanSeq. obj prop->key arr i meta))
+
+  ISeqable
+  (-seq [this]
+    (when (< i (alength arr))
+      this))
+
+  IMeta
+  (-meta [_] meta)
+  IWithMeta
+  (-with-meta [coll new-meta]
+    (if (identical? new-meta meta)
+      coll
+      (BeanSeq. obj prop->key arr i new-meta)))
+
+  ASeq
+  ISeq
+  (-first [_] (bean-seq-entry obj prop->key arr i))
+  (-rest [_] (if (< (inc i) (alength arr))
+               (BeanSeq. obj prop->key arr (inc i) nil)
+               ()))
+
+  INext
+  (-next [_] (if (< (inc i) (alength arr))
+               (BeanSeq. obj prop->key arr (inc i) nil)
+               nil))
+
+  ICounted
+  (-count [_]
+    (max 0 (- (alength arr) i)))
+
+  IIndexed
+  (-nth [_ n]
+    (let [i (+ n i)]
+      (if (and (<= 0 i) (< i (alength arr)))
+        (bean-seq-entry obj prop->key arr i)
+        (throw (js/Error. "Index out of bounds")))))
+  (-nth [_ n not-found]
+    (let [i (+ n i)]
+      (if (and (<= 0 i) (< i (alength arr)))
+        (bean-seq-entry obj prop->key arr i)
+        not-found)))
+
+  ISequential
+  IEquiv
+  (-equiv [coll other] (equiv-sequential coll other))
+
+  ICollection
+  (-conj [coll o] (cons o coll))
+
+  IEmptyableCollection
+  (-empty [_] ())
+
+  IReduce
+  (-reduce [coll f]
+    (ci-reduce coll f (bean-seq-entry obj prop->key arr i) (inc i)))
+  (-reduce [coll f start]
+    (ci-reduce coll f start i))
+
+  IHash
+  (-hash [coll] (hash-ordered-coll coll))
+
+  IPrintWithWriter
+  (-pr-writer [coll writer opts]
+    (pr-sequential-writer writer pr-writer "(" " " ")" opts coll)))
 
 (deftype ^:private Bean [meta obj prop->key key->prop ^:mutable __hash]
   Object
@@ -69,7 +148,9 @@
 
   ISeqable
   (-seq [_]
-    (thisfn obj (js-keys obj) prop->key))
+    (let [props (js-keys obj)]
+      (when (pos? (alength props))
+        (BeanSeq. obj prop->key props 0 nil))))
 
   IAssociative
   (-assoc [_ k v]
@@ -82,7 +163,7 @@
   (-find [coll k]
     (let [v (-lookup coll k lookup-sentinel)]
       (when-not (identical? v lookup-sentinel)
-        (->MapEntry k v nil))))
+        (MapEntry. k v nil))))
 
   IMap
   (-dissoc [_ k]
@@ -107,8 +188,8 @@
         (if (reduced? x) @x (throw x)))))
 
   IReduce
-  (-reduce [_ f]
-    (-reduce (snapshot obj prop->key) f))
+  (-reduce [coll f]
+    (-reduce (-seq coll) f))
   (-reduce [coll f start]
     (-kv-reduce coll (fn [r k v] (f r (MapEntry. k v nil))) start))
 

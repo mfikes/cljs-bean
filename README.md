@@ -20,8 +20,8 @@ This lets you interoperate with JavaScript objects in an idiomatic fashion, whil
   (+ a b))
 ```
 
-If the map produced by `bean` is going to be retained, the object passed 
-should be effectively immutable, as the resulting map is backed by the object.
+If a bean is going to be retained, the object passed 
+should be effectively immutable, as the resulting bean is backed by the object.
 
 The `bean` function behaves like Clojure’s in that it is not recursive:
 
@@ -32,7 +32,7 @@ The `bean` function behaves like Clojure’s in that it is not recursive:
 
 ## Key Mapping
 
-The map produced by `bean` keywordizes the keys. If instead you pass `:keywordize-keys` `false`,
+By default, the map produced by `bean` keywordizes the keys. If instead you pass `:keywordize-keys` `false`,
 string keys will be produced:
 
 ```clojure
@@ -40,9 +40,9 @@ string keys will be produced:
 ;; => {"a" 1, "b" 2, "c/d" 3, "e f" 4}
 ```
 
-You can control key to property name management by supplying both `:key->prop` and `:prop->key`.
-For example, to mimic the behavior of ClojureScript's JavaScript object literal syntax, where
-keywords are used only if they can be represented as simple keywords:
+You can control the key to property name mapping by supplying both `:key->prop` and `:prop->key`.
+Here is an example that mimics the behavior of ClojureScript's JavaScript object literal syntax, where
+keywords are used only if properties can be represented as simple keywords:
 
 ```clojure
 (defn prop->key [prop]
