@@ -3,6 +3,16 @@
    [clojure.test :refer [are deftest is]]
    [cljs-bean.core :refer [bean]]))
 
+(defn prop->key [prop]
+  (cond-> prop
+    (some? (re-matches #"[A-Za-z_\*\+\?!\-'][\w\*\+\?!\-']*" prop)) keyword))
+
+(defn key->prop [key]
+  (cond
+    (simple-keyword? key) (name key)
+    (and (string? key) (string? (prop->key key))) key
+    :else nil))
+
 (def color-black
   #js {:red          0
        :blue         0
@@ -32,25 +42,51 @@
 
 (deftest qualified-name-lookup
   (let [b (bean #js {"my-ns/my-name" 17})]
+    (is (= 17 (get b :my-ns/my-name))))
+  (let [b (bean #js {"my-ns/my-name" 17} :keywordize-keys false)]
+    (is (= 17 (get b "my-ns/my-name"))))
+  (let [b (bean #js {"my-ns/my-name" 17} :prop->key prop->key :key->prop key->prop)]
     (is (= 17 (get b "my-ns/my-name")))))
 
 (deftest dot-toString-test
   (is (= "{:a 1}" (.toString (bean #js {:a 1}))))
-  (is (= "{\"a/b\" 1}" (.toString (bean #js {"a/b" 1})))))
+  (is (= "{\"a\" 1}" (.toString (bean #js {:a 1} :keywordize-keys false))))
+  (is (= "{:a 1}" (.toString (bean #js {:a 1} :prop->key prop->key :key->prop key->prop))))
+  (is (#{"#:a{:b 1}" "{:a/b 1}"} (.toString (bean #js {"a/b" 1}))))
+  (is (= "{\"a/b\" 1}" (.toString (bean #js {"a/b" 1} :keywordize-keys false))))
+  (is (= "{\"a/b\" 1}" (.toString (bean #js {"a/b" 1} :prop->key prop->key :key->prop key->prop)))))
 
 (deftest dot-equiv-test
   (is (.equiv (bean #js {:a 1}) {:a 1}))
-  (is (.equiv (bean #js {"a/b" 1}) {"a/b" 1})))
+  (is (.equiv (bean #js {:a 1} :keywordize-keys false) {"a" 1}))
+  (is (.equiv (bean #js {:a 1} :prop->key prop->key :key->prop key->prop) {:a 1}))
+  (is (.equiv (bean #js {"a/b" 1}) {:a/b 1}))
+  (is (.equiv (bean #js {"a/b" 1} :keywordize-keys false) {"a/b" 1}))
+  (is (.equiv (bean #js {"a/b" 1} :prop->key prop->key :key->prop key->prop) {"a/b" 1})))
 
 (deftest keys-test
   (is (= [:a] (keys (bean #js {:a 1}))))
-  (is (= ["a/b"] (keys (bean #js {"a/b" 1})))))
+  (is (= ["a"] (keys (bean #js {:a 1} :keywordize-keys false))))
+  (is (= [:a] (keys (bean #js {:a 1} :prop->key prop->key :key->prop key->prop))))
+  (is (= [:a/b] (keys (bean #js {"a/b" 1}))))
+  (is (= ["a/b"] (keys (bean #js {"a/b" 1} :keywordize-keys false))))
+  (is (= ["a/b"] (keys (bean #js {"a/b" 1} :prop->key prop->key :key->prop key->prop)))))
 
 (deftest vals-test
   (is (= [1] (vals (bean #js {:a 1})))))
 
 (deftest clone-test
   (let [o (bean #js {:a 1})
+        c (clone o)]
+    (is (= o c))
+    (is (not (identical? o c)))
+    (is (nil? (meta c))))
+  (let [o (bean #js {:a 1} :keywordize-keys false)
+        c (clone o)]
+    (is (= o c))
+    (is (not (identical? o c)))
+    (is (nil? (meta c))))
+  (let [o (bean #js {:a 1, "a/b" 2, "d e" 3} :prop->key prop->key :key->prop key->prop)
         c (clone o)]
     (is (= o c))
     (is (not (identical? o c)))
@@ -63,6 +99,8 @@
 
 (deftest meta-test
   (let [o (bean #js {:a 1})]
+    (= {:foo true} (meta (with-meta o {:foo true}))))
+  (let [o (bean #js {:a 1} :keywordize-keys false)]
     (= {:foo true} (meta (with-meta o {:foo true})))))
 
 (deftest conj-test
@@ -78,27 +116,43 @@
 
 (deftest equiv-test
   (is (-equiv (bean #js {:a 1}) {:a 1}))
-  (is (-equiv (bean #js {"a/b" 1}) {"a/b" 1})))
+  (is (-equiv (bean #js {:a 1} :keywordize-keys false) {"a" 1}))
+  (is (-equiv (bean #js {:a 1} :prop->key prop->key :key->prop key->prop) {:a 1}))
+  (is (-equiv (bean #js {"a/b" 1}) {:a/b 1}))
+  (is (-equiv (bean #js {"a/b" 1} :keywordize-keys false) {"a/b" 1}))
+  (is (-equiv (bean #js {"a/b" 1} :prop->key prop->key :key->prop key->prop) {"a/b" 1})))
 
 (deftest hash-test
-  (is (== (hash {:a 1}) (hash (bean #js {:a 1})))))
+  (is (== (hash {:a 1}) (hash (bean #js {:a 1}))))
+  (is (== (hash {"a" 1}) (hash (bean #js {:a 1} :keywordize-keys false)))))
 
 (deftest iterator-test
   (let [i (-iterator (bean #js {:a 1}))]
     (is (true? (.hasNext i)))
-    (is (= [:a 1] (.next i)))))
+    (is (= [:a 1] (.next i))))
+  (let [i (-iterator (bean #js {:a 1} :keywordize-keys false))]
+    (is (true? (.hasNext i)))
+    (is (= ["a" 1] (.next i)))))
 
 (deftest seq-test
   (is (nil? (seq (bean #js {}))))
+  (is (nil? (seq (bean #js {} :keywordize-keys false))))
   (is (= [[:a 1]] (seq (bean #js {:a 1}))))
+  (is (= [["a" 1]] (seq (bean #js {:a 1} :keywordize-keys false))))
   (is (= [:a] (keys (seq (bean #js {:a 1})))))
-  (is (= [1] (vals (seq (bean #js {:a 1}))))))
+  (is (= ["a"] (keys (seq (bean #js {:a 1} :keywordize-keys false)))))
+  (is (= [1] (vals (seq (bean #js {:a 1})))))
+  (is (= [1] (vals (seq (bean #js {:a 1} :keywordize-keys false))))))
 
 (deftest assoc-test
   (let [b (bean #js {:x 1})
         m (assoc b :y 2)]
     (is (map? m))
-    (is (= m {:x 1 :y 2}))))
+    (is (= m {:x 1 :y 2})))
+  (let [b (bean #js {:x 1} :keywordize-keys false)
+        m (assoc b :y 2)]
+    (is (map? m))
+    (is (= m {"x" 1 :y 2}))))
 
 (deftest contains?-test
   (let [b (bean color-black)]
@@ -111,11 +165,15 @@
     (is (map-entry? (find b :red)))
     (is (= [:red 0] (find b :red))))
   (let [b (bean #js {"my-ns/my-name" 17})]
+    (is (= [:my-ns/my-name 17] (find b :my-ns/my-name))))
+  (let [b (bean #js {"my-ns/my-name" 17} :keywordize-keys false)]
     (is (= ["my-ns/my-name" 17] (find b "my-ns/my-name")))))
 
 (deftest dissoc-test
   (let [b (bean #js {:a 1, :b 2})]
-    (is (= {:a 1} (dissoc b :b)))))
+    (is (= {:a 1} (dissoc b :b))))
+  (let [b (bean #js {:a 1, :b 2} :keywordize-keys false)]
+    (is (= {"a" 1} (dissoc b "b")))))
 
 (deftest reduce-kv-test
   (is (= {1 :a, 2 :b, 3 :c}
@@ -136,6 +194,8 @@
 (deftest ifn-test
   (let [b (bean color-black)]
     (is (= -16777216 (b :RGB))))
+  (let [b (bean color-black :keywordize-keys false)]
+    (is (= -16777216 (b "RGB"))))
   (let [b (bean color-black)]
     (is (= ::not-found (b :bogus ::not-found)))))
 
