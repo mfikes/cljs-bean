@@ -23,9 +23,9 @@
     (persistent! @result)))
 
 (defn- thisfn [obj ks]
-  (lazy-seq
-    (when-let [ks (seq ks)]
-      (let [first-ks (first ks)]
+  (when-let [ks (seq ks)]
+    (let [first-ks (first ks)]
+      (lazy-seq
         (cons (MapEntry. (prop->key first-ks) (unchecked-get obj first-ks) nil)
           (thisfn obj (rest ks)))))))
 
