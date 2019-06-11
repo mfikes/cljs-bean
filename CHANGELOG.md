@@ -3,14 +3,14 @@ All notable changes to this project will be documented in this file. This change
 
 ## [Unreleased]
 ### Changed
-- Make the `Bean` `deftype` be private ([#4](https://github.com/mfikes/cljs-bean/pull/4))
-- Faster 3-arity `reduce` by delegating to `reduce-kv` ([#5](https://github.com/mfikes/cljs-bean/pull/5))
-- Faster `seq` when not consuming all ([#6](https://github.com/mfikes/cljs-bean/pull/6))
+- Make the `Bean` `deftype` be private
+- Faster 3-arity `reduce` by delegating to `reduce-kv`
+- Faster `seq` when not consuming all
 
 ## [0.2.0] - 2019-06-10
 ### Changed
 - Revise project name to “CLJS Bean” ([#1](https://github.com/mfikes/cljs-bean/issues/1))
-- Faster `reduce-kv` ([#2](https://github.com/mfikes/cljs-bean/pull/2))
+- Faster `reduce-kv`
 
 ## [0.1.0] - 2019-06-09
 ### Added
