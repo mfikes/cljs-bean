@@ -30,6 +30,44 @@ The `bean` function behaves like Clojure’s in that it is not recursive:
 ;; => {:a 1, :obj #js {:x 13, :y 17}}
 ```
 
+## Object Extraction
+
+Applying `dissoc` on a bean produces a new bean. And, where possible, `assoc`, and `conj` on a bean produces a new bean. 
+
+In these cases, the `bean?` predicate will be satisfied on the result. If so, `object` can be used to extract a JavaScript object from the bean:
+
+```clojure
+(require '[cljs-bean.core :refer [bean bean? object]])
+
+(assoc (bean #js {:a 1}) :b 2)
+;; => {:a 1, :b 2}
+
+(bean? *1)
+;; => true
+
+(object *2)
+;; => #js {:a 1, :b 2}
+```
+
+This provides flexible ways to create JavaScript objects:
+
+```
+(->> (zipmap [:a :b :c] (range))
+     (into (bean #js {}))
+     object)
+;; => #js {:a 0, :b 1, :c 2}
+```
+
+It is not possible for `assoc`, or `conj` to produce a bean if any keys added are incompatible:
+
+```clojure
+(assoc (bean #js {:a 1}) "b" 2 :c 3)
+;; => {:a 1, "b" 2, :c 3}
+
+(bean? *1)
+;; => false
+```
+
 ## Key Mapping
 
 By default, the map produced by `bean` keywordizes the keys. If instead you pass `:keywordize-keys` `false`,

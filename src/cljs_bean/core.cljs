@@ -13,6 +13,11 @@
   (let [prop (aget arr i)]
     (MapEntry. (prop->key prop) (unchecked-get obj prop) nil)))
 
+(defn- compatible-key? [k prop->key]
+  (or
+    (and (keyword? k) (identical? prop->key keyword))
+    (and (string? k) (identical? prop->key identity))))
+
 (deftype ^:private BeanSeq [obj prop->key arr i meta]
   Object
   (toString [coll]
@@ -95,6 +100,9 @@
   (-pr-writer [coll writer opts]
     (pr-sequential-writer writer pr-writer "(" " " ")" opts coll)))
 
+(declare ^{:arglists '([x])} bean?)
+(declare ^{:arglists '([bean])} object)
+
 (deftype ^:private Bean [meta obj prop->key key->prop ^:mutable __hash]
   Object
   (toString [coll]
@@ -129,8 +137,23 @@
   (-meta [_] meta)
 
   ICollection
-  (-conj [_ entry]
-    (-conj (snapshot obj prop->key) entry))
+  (-conj [coll entry]
+    (if (vector? entry)
+      (if (compatible-key? (entry 0) prop->key)
+        (-assoc coll (entry 0) (entry 1))
+        (-assoc (snapshot obj prop->key) (entry 0) (entry 1)))
+      (loop [ret coll es (seq entry)]
+        (if (nil? es)
+          ret
+          (let [e (first es)]
+            (if (vector? e)
+              (recur (if (compatible-key? (e 0) prop->key)
+                       (-assoc ret (e 0) (e 1))
+                       (if (bean? ret)
+                         (-assoc (snapshot (object ret) prop->key) (e 0) (e 1))
+                         (-assoc ret (e 0) (e 1))))
+                (next es))
+              (throw (js/Error. "conj on a map takes map entries or seqables of map entries"))))))))
 
   IEmptyableCollection
   (-empty [_] (-with-meta {} meta))
@@ -142,10 +165,6 @@
   IHash
   (-hash [coll] (caching-hash coll hash-unordered-coll __hash))
 
-  IIterable
-  (-iterator [_]
-    (-iterator (snapshot obj prop->key)))
-
   ISeqable
   (-seq [_]
     (let [props (js-keys obj)]
@@ -154,7 +173,11 @@
 
   IAssociative
   (-assoc [_ k v]
-    (-assoc (snapshot obj prop->key) k v))
+    (if (compatible-key? k prop->key)
+      (Bean. nil
+        (doto (gobj/clone obj) (unchecked-set (key->prop k) v))
+        prop->key key->prop nil)
+      (-assoc (snapshot obj prop->key) k v)))
 
   (-contains-key? [coll k]
     (contains? coll k))
@@ -167,7 +190,9 @@
 
   IMap
   (-dissoc [_ k]
-    (-dissoc (snapshot obj prop->key) k))
+    (Bean. nil
+      (doto (gobj/clone obj) (js-delete (key->prop k)))
+      prop->key key->prop nil))
 
   ILookup
   (-lookup [_ k]
@@ -200,12 +225,6 @@
   (-invoke [coll k not-found]
     (-lookup coll k not-found))
 
-  IEditableCollection
-  (-as-transient [_]
-    (let [result (volatile! (transient {}))]
-      (gobj/forEach obj (fn [v k _] (vswap! result assoc! (prop->key k) v)))
-      @result))
-
   IPrintWithWriter
   (-pr-writer [coll writer opts]
     (print-map coll pr-writer writer opts)))
@@ -222,3 +241,13 @@
        (true? keywordize-keys) (bean x)
        (and (some? prop->key) (some? key->prop)) (Bean. nil x prop->key key->prop nil)
        :else (throw (js/Error ":keywordize-keys or both :prop->key and :key->prop must be specified"))))))
+
+(defn bean?
+  "Returns true if x is a bean."
+  [x]
+  (instance? Bean x))
+
+(defn object
+  "Takes a bean and returns a JavaScript object."
+  [bean]
+  (gobj/clone (.-obj bean)))

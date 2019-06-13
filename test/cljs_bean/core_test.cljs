@@ -1,7 +1,7 @@
 (ns cljs-bean.core-test
   (:require
    [clojure.test :refer [are deftest is]]
-   [cljs-bean.core :refer [bean]]))
+   [cljs-bean.core :refer [bean bean? object]]))
 
 (defn prop->key [prop]
   (cond-> prop
@@ -105,9 +105,17 @@
 
 (deftest conj-test
   (let [b (bean #js {:x 1})
-        m (conj b [:y 2])]
+        m (conj b [:y 2])
+        o (object m)]
     (is (map? m))
-    (is (= m {:x 1 :y 2}))))
+    (is (bean m))
+    (is (= m {:x 1 :y 2}))
+    (is (#{["x" "y"] ["y" "x"]} (vec (js-keys o)))))
+  (let [b (bean #js {:x 1})
+        m (conj b ["y" 2])]
+    (is (map? m))
+    (is (not (bean? m)))
+    (is (= m {:x 1 "y" 2}))))
 
 (deftest empty-test
   (is (= {} (empty (bean #js {:a 1}))))
@@ -125,14 +133,6 @@
 (deftest hash-test
   (is (== (hash {:a 1}) (hash (bean #js {:a 1}))))
   (is (== (hash {"a" 1}) (hash (bean #js {:a 1} :keywordize-keys false)))))
-
-(deftest iterator-test
-  (let [i (-iterator (bean #js {:a 1}))]
-    (is (true? (.hasNext i)))
-    (is (= [:a 1] (.next i))))
-  (let [i (-iterator (bean #js {:a 1} :keywordize-keys false))]
-    (is (true? (.hasNext i)))
-    (is (= ["a" 1] (.next i)))))
 
 (deftest seq-test
   (is (nil? (seq (bean #js {}))))
@@ -156,12 +156,30 @@
 
 (deftest assoc-test
   (let [b (bean #js {:x 1})
-        m (assoc b :y 2)]
+        m (assoc b :y 2)
+        o (object m)]
     (is (map? m))
-    (is (= m {:x 1 :y 2})))
+    (is (bean? m))
+    (is (= m {:x 1 :y 2}))
+    (is (== 1 (unchecked-get o "x")))
+    (is (== 2 (unchecked-get o "y"))))
+  (let [b (bean #js {:x 1})
+        m (assoc b "y" 2)]
+    (is (map? m))
+    (is (not (bean? m)))
+    (is (= m {:x 1 "y" 2})))
+  (let [b (bean #js {:x 1} :keywordize-keys false)
+        m (assoc b "y" 2)
+        o (object m)]
+    (is (map? m))
+    (is (bean? m))
+    (is (= m {"x" 1 "y" 2}))
+    (is (== 1 (unchecked-get o "x")))
+    (is (== 2 (unchecked-get o "y"))))
   (let [b (bean #js {:x 1} :keywordize-keys false)
         m (assoc b :y 2)]
     (is (map? m))
+    (is (not (bean? m)))
     (is (= m {"x" 1 :y 2}))))
 
 (deftest contains?-test
@@ -180,10 +198,36 @@
     (is (= ["my-ns/my-name" 17] (find b "my-ns/my-name")))))
 
 (deftest dissoc-test
-  (let [b (bean #js {:a 1, :b 2})]
-    (is (= {:a 1} (dissoc b :b))))
-  (let [b (bean #js {:a 1, :b 2} :keywordize-keys false)]
-    (is (= {"a" 1} (dissoc b "b")))))
+  (let [b (bean #js {:a 1, :b 2})
+        m (dissoc b :b)
+        o (object m)]
+    (is (= m {:a 1}))
+    (is (bean? m))
+    (is (= ["a"] (vec (js-keys o))))
+    (is (== 1 (unchecked-get o "a"))))
+  (let [b (bean #js {:a 1, :b 2})
+        m (dissoc b "c")
+        o (object m)]
+    (is (= m {:a 1, :b 2}))
+    (is (bean? m))
+    (is (#{["a" "b"] ["b" "a"]} (vec (js-keys o))))
+    (is (== 1 (unchecked-get o "a")))
+    (is (== 2 (unchecked-get o "b"))))
+  (let [b (bean #js {:a 1, :b 2} :keywordize-keys false)
+        m (dissoc b "b")
+        o (object m)]
+    (is (= m {"a" 1}))
+    (is (bean? m))
+    (is (= ["a"] (vec (js-keys o))))
+    (is (== 1 (unchecked-get o "a"))))
+  (let [b (bean #js {:a 1, :b 2} :keywordize-keys false)
+        m (dissoc b :c)
+        o (object m)]
+    (is (= m {"a" 1, "b" 2}))
+    (is (bean? m))
+    (is (#{["a" "b"] ["b" "a"]} (vec (js-keys o))))
+    (is (== 1 (unchecked-get o "a")))
+    (is (== 2 (unchecked-get o "b")))))
 
 (deftest reduce-kv-test
   (is (= {1 :a, 2 :b, 3 :c}
@@ -209,8 +253,24 @@
   (let [b (bean color-black)]
     (is (= ::not-found (b :bogus ::not-found)))))
 
-(deftest editable-collection-test
-  (is (= {:a 1, :b 2} (persistent! (assoc! (transient (bean #js {:a 1})) :b 2)))))
+(deftest into-test
+  (is (bean? (into (bean #js {}) {:a 1})))
+  (is (not (bean? (into (bean #js {}) [[:a 1] ["b" 2]]))))
+  (is (= {:a 1, "b" 2} (into (bean #js {}) [[:a 1] ["b" 2]])))
+  (is (not (bean? (into (bean #js {}) [["a" 1] [:b 2]]))))
+  (is (= {"a" 1, :b 2} (into (bean #js {}) [["a" 1] [:b 2]])))
+  (is (= (into (bean #js {:a 1} :keywordize-keys false) {"b" 2}) {"a" 1, "b" 2})))
+
+(deftest bean?-test
+  (is (bean? (bean #js {:a 1})))
+  (is (not (bean? {:a 1}))))
+
+(deftest object-test
+  (is (object? (object (bean #js {}))))
+  (let [o1 #js {:a 1}
+        o2 (object (bean o1))]
+    (is (not (identical? o2 o1))))
+  (is (== 1 (unchecked-get (object (bean #js {:a 1})) "a"))))
 
 (deftest seq-dot-toString-test
   (is (= "([:a 1])" (.toString (seq (bean #js {:a 1})))))
