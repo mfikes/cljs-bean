@@ -274,7 +274,7 @@
   (is (object? (object (bean #js {}))))
   (let [o1 #js {:a 1}
         o2 (object (bean o1))]
-    (is (not (identical? o2 o1))))
+    (is (identical? o2 o1)))
   (is (== 1 (unchecked-get (object (bean #js {:a 1})) "a"))))
 
 (deftest seq-dot-toString-test

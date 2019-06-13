@@ -256,4 +256,4 @@
 (defn object
   "Takes a bean and returns a JavaScript object."
   [bean]
-  (gobj/clone (.-obj bean)))
+  (.-obj bean))
