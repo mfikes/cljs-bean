@@ -230,8 +230,14 @@
     (print-map coll pr-writer writer opts)))
 
 (defn bean
-  "Takes a JavaScript object and returns a read-only implementation of the
-  map abstraction backed by the object."
+  "Takes a JavaScript object and returns a read-only implementation of the map
+  abstraction backed by the object. By default, bean produces beans that
+  keywordize the keys. Supply :keywordize-keys false to suppress this behavior.
+  You can alternatively supply :prop->key and :key->prop with functions that
+  controls the mapping between properties and keys. Calling (bean) produces an
+  empty bean."
+  ([]
+   (Bean. nil #js {} keyword #(.-fqn %) nil))
   ([x]
    (Bean. nil x keyword #(.-fqn %) nil))
   ([x & opts]

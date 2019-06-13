@@ -40,6 +40,11 @@
       (get b "red") nil
       (get b :missing :default) :default)))
 
+(deftest empty-bean-test
+  (is (bean? (bean)))
+  (is (empty? (bean)))
+  (is (= (assoc (bean) :a 1) {:a 1})))
+
 (deftest qualified-name-lookup
   (let [b (bean #js {"my-ns/my-name" 17})]
     (is (= 17 (get b :my-ns/my-name))))
