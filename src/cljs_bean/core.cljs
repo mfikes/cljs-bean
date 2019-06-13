@@ -202,20 +202,13 @@
   ICollection
   (-conj [coll entry]
     (if (vector? entry)
-      (if (compatible-key? (entry 0) prop->key)
-        (-assoc coll (entry 0) (entry 1))
-        (-assoc (snapshot obj prop->key) (entry 0) (entry 1)))
+      (-assoc coll (entry 0) (entry 1))
       (loop [ret coll es (seq entry)]
         (if (nil? es)
           ret
           (let [e (first es)]
             (if (vector? e)
-              (recur (if (compatible-key? (e 0) prop->key)
-                       (-assoc ret (e 0) (e 1))
-                       (if (bean? ret)
-                         (-assoc (snapshot (object ret) prop->key) (e 0) (e 1))
-                         (-assoc ret (e 0) (e 1))))
-                (next es))
+              (recur (-assoc ret (e 0) (e 1)) (next es))
               (throw (js/Error. "conj on a map takes map entries or seqables of map entries"))))))))
 
   IEmptyableCollection
