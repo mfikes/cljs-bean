@@ -18,6 +18,69 @@
     (and (keyword? k) (identical? prop->key keyword))
     (and (string? k) (identical? prop->key identity))))
 
+(declare Bean)
+
+(deftype TransientBean [^:mutable ^boolean editable?
+                        obj prop->key key->prop]
+  ILookup
+  (-lookup [_ k]
+    (if editable?
+      (unchecked-get obj (key->prop k))
+      (throw (js/Error. "lookup after persistent!"))))
+  (-lookup [_ k not-found]
+    (if editable?
+      (gobj/get obj (key->prop k) not-found)
+      (throw (js/Error. "lookup after persistent!"))))
+
+  ITransientCollection
+  (-conj! [tcoll o]
+    (if editable?
+      (cond
+        (map-entry? o)
+        (-assoc! tcoll (key o) (val o))
+
+        (vector? o)
+        (-assoc! tcoll (o 0) (o 1))
+
+        :else
+        (loop [es (seq o) tcoll tcoll]
+          (if-let [e (first es)]
+            (recur (next es)
+              (-assoc! tcoll (key e) (val e)))
+            tcoll)))
+      (throw (js/Error. "conj! after persistent!"))))
+
+  (-persistent! [tcoll]
+    (if editable?
+      (do
+        (set! editable? false)
+        (Bean. nil obj prop->key key->prop nil))
+      (throw (js/Error. "persistent! called twice"))))
+
+  ITransientAssociative
+  (-assoc! [tcoll k v]
+    (if editable?
+      (if (compatible-key? k prop->key)
+        (do
+          (unchecked-set obj (key->prop k) v)
+          tcoll)
+        (-assoc! (transient (snapshot obj prop->key)) k v))
+      (throw (js/Error. "assoc! after persistent!"))))
+
+  ITransientMap
+  (-dissoc! [tcoll k]
+    (if editable?
+      (do
+        (js-delete obj (key->prop k))
+        tcoll)
+      (throw (js/Error. "dissoc! after persistent!"))))
+
+  IFn
+  (-invoke [tcoll key]
+    (-lookup tcoll key nil))
+  (-invoke [tcoll key not-found]
+    (-lookup tcoll key not-found)))
+
 (deftype ^:private BeanSeq [obj prop->key arr i meta]
   Object
   (toString [coll]
@@ -224,6 +287,10 @@
 
   (-invoke [coll k not-found]
     (-lookup coll k not-found))
+
+  IEditableCollection
+  (-as-transient [_]
+    (TransientBean. true (gobj/clone obj) prop->key key->prop))
 
   IPrintWithWriter
   (-pr-writer [coll writer opts]
