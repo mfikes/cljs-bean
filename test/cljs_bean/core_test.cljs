@@ -123,9 +123,14 @@
     (is (= m {:x 1 "y" 2}))))
 
 (deftest empty-test
-  (is (= {} (empty (bean #js {:a 1}))))
+  (is (= (empty (bean #js {:a 1})) {}))
+  (is (empty? (empty (bean #js {:a 1}))))
+  (is (bean? (empty (bean #js {:a 1}))))
   (let [m (with-meta (bean #js {:a 1}) {:foo true})]
-    (= {:foo true} (meta (empty m)))))
+    (= {:foo true} (meta (empty m))))
+  (is (= (assoc (empty (bean #js {:b 2})) :a 1) {:a 1}))
+  (is (not (bean? (assoc (bean) "a" 1))))
+  (is (= (assoc (bean) "a" 1) {"a" 1})))
 
 (deftest equiv-test
   (is (-equiv (bean #js {:a 1}) {:a 1}))

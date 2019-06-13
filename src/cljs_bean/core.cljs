@@ -156,7 +156,7 @@
               (throw (js/Error. "conj on a map takes map entries or seqables of map entries"))))))))
 
   IEmptyableCollection
-  (-empty [_] (-with-meta {} meta))
+  (-empty [_] (Bean. meta #js {} prop->key key->prop nil))
 
   IEquiv
   (-equiv [coll other]
