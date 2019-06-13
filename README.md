@@ -13,7 +13,8 @@ The `bean` function produces a thin wrapper over JavaScript objects, implementin
 ;; => {:a 1, :b 2}
 ```
 
-This lets you interoperate with JavaScript objects in an idiomatic fashion, while being an order of magnitude faster than equivalent constructs using `js->clj`:
+This lets you interoperate with JavaScript objects in an idiomatic fashion, while being an order of 
+magnitude faster than equivalent constructs using `js->clj`:
 
 ```clojure
 (let [{:keys [a b]} (bean #js {:a 1, :b 2})]
@@ -28,6 +29,47 @@ The `bean` function behaves like Clojure’s in that it is not recursive:
 ```clojure
 (bean #js {:a 1, :obj #js {:x 13, :y 17}})
 ;; => {:a 1, :obj #js {:x 13, :y 17}}
+```
+
+## Object Extraction
+
+Where possible, operations such as `assoc` and `conj` on a bean produces a new bean. 
+
+In these cases, the `bean?` predicate will be satisfied on the result. If so, `object` 
+can be used to extract the wrapped JavaScript object from the bean:
+
+```clojure
+(require '[cljs-bean.core :refer [bean bean? object]])
+
+(assoc (bean #js {:a 1}) :b 2)
+;; => {:a 1, :b 2}
+
+(bean? *1)
+;; => true
+
+(object *2)
+;; => #js {:a 1, :b 2}
+```
+
+This enables flexible and efficient ways to create JavaScript objects using Clojure idioms. 
+
+For example, (via transducers and transients) the following builds up a JavaScript object 
+using four operations to set property values:
+
+```clojure
+(let [m {:a 1, :b 2, :c 3, :d 4, :e 5, :f 6, :g 7, :h 8}]
+  (object (into (bean) (filter (comp odd? val)) m)))
+;; => #js {:a 1, :c 3, :e 5, :g 7}
+```
+
+It is not possible for `assoc`, or `conj` to produce a bean if any of the keys added are incompatible:
+
+```clojure
+(assoc (bean #js {:a 1}) "b" 2 :c 3)
+;; => {:a 1, "b" 2, :c 3}
+
+(bean? *1)
+;; => false
 ```
 
 ## Key Mapping

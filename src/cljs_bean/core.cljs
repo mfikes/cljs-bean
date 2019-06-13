@@ -13,6 +13,74 @@
   (let [prop (aget arr i)]
     (MapEntry. (prop->key prop) (unchecked-get obj prop) nil)))
 
+(defn- compatible-key? [k prop->key]
+  (or
+    (and (keyword? k) (identical? prop->key keyword))
+    (and (string? k) (identical? prop->key identity))))
+
+(declare Bean)
+
+(deftype TransientBean [^:mutable ^boolean editable?
+                        obj prop->key key->prop]
+  ILookup
+  (-lookup [_ k]
+    (if editable?
+      (unchecked-get obj (key->prop k))
+      (throw (js/Error. "lookup after persistent!"))))
+  (-lookup [_ k not-found]
+    (if editable?
+      (gobj/get obj (key->prop k) not-found)
+      (throw (js/Error. "lookup after persistent!"))))
+
+  ITransientCollection
+  (-conj! [tcoll o]
+    (if editable?
+      (cond
+        (map-entry? o)
+        (-assoc! tcoll (key o) (val o))
+
+        (vector? o)
+        (-assoc! tcoll (o 0) (o 1))
+
+        :else
+        (loop [es (seq o) tcoll tcoll]
+          (if-let [e (first es)]
+            (recur (next es)
+              (-assoc! tcoll (key e) (val e)))
+            tcoll)))
+      (throw (js/Error. "conj! after persistent!"))))
+
+  (-persistent! [tcoll]
+    (if editable?
+      (do
+        (set! editable? false)
+        (Bean. nil obj prop->key key->prop nil))
+      (throw (js/Error. "persistent! called twice"))))
+
+  ITransientAssociative
+  (-assoc! [tcoll k v]
+    (if editable?
+      (if (compatible-key? k prop->key)
+        (do
+          (unchecked-set obj (key->prop k) v)
+          tcoll)
+        (-assoc! (transient (snapshot obj prop->key)) k v))
+      (throw (js/Error. "assoc! after persistent!"))))
+
+  ITransientMap
+  (-dissoc! [tcoll k]
+    (if editable?
+      (do
+        (js-delete obj (key->prop k))
+        tcoll)
+      (throw (js/Error. "dissoc! after persistent!"))))
+
+  IFn
+  (-invoke [tcoll key]
+    (-lookup tcoll key nil))
+  (-invoke [tcoll key not-found]
+    (-lookup tcoll key not-found)))
+
 (deftype ^:private BeanSeq [obj prop->key arr i meta]
   Object
   (toString [coll]
@@ -95,6 +163,9 @@
   (-pr-writer [coll writer opts]
     (pr-sequential-writer writer pr-writer "(" " " ")" opts coll)))
 
+(declare ^{:arglists '([x])} bean?)
+(declare ^{:arglists '([bean])} object)
+
 (deftype ^:private Bean [meta obj prop->key key->prop ^:mutable __hash]
   Object
   (toString [coll]
@@ -129,11 +200,19 @@
   (-meta [_] meta)
 
   ICollection
-  (-conj [_ entry]
-    (-conj (snapshot obj prop->key) entry))
+  (-conj [coll entry]
+    (if (vector? entry)
+      (-assoc coll (entry 0) (entry 1))
+      (loop [ret coll es (seq entry)]
+        (if (nil? es)
+          ret
+          (let [e (first es)]
+            (if (vector? e)
+              (recur (-assoc ret (e 0) (e 1)) (next es))
+              (throw (js/Error. "conj on a map takes map entries or seqables of map entries"))))))))
 
   IEmptyableCollection
-  (-empty [_] (-with-meta {} meta))
+  (-empty [_] (Bean. meta #js {} prop->key key->prop nil))
 
   IEquiv
   (-equiv [coll other]
@@ -141,10 +220,6 @@
 
   IHash
   (-hash [coll] (caching-hash coll hash-unordered-coll __hash))
-
-  IIterable
-  (-iterator [_]
-    (-iterator (snapshot obj prop->key)))
 
   ISeqable
   (-seq [_]
@@ -154,7 +229,11 @@
 
   IAssociative
   (-assoc [_ k v]
-    (-assoc (snapshot obj prop->key) k v))
+    (if (compatible-key? k prop->key)
+      (Bean. nil
+        (doto (gobj/clone obj) (unchecked-set (key->prop k) v))
+        prop->key key->prop nil)
+      (-assoc (snapshot obj prop->key) k v)))
 
   (-contains-key? [coll k]
     (contains? coll k))
@@ -167,7 +246,9 @@
 
   IMap
   (-dissoc [_ k]
-    (-dissoc (snapshot obj prop->key) k))
+    (Bean. nil
+      (doto (gobj/clone obj) (js-delete (key->prop k)))
+      prop->key key->prop nil))
 
   ILookup
   (-lookup [_ k]
@@ -202,17 +283,21 @@
 
   IEditableCollection
   (-as-transient [_]
-    (let [result (volatile! (transient {}))]
-      (gobj/forEach obj (fn [v k _] (vswap! result assoc! (prop->key k) v)))
-      @result))
+    (TransientBean. true (gobj/clone obj) prop->key key->prop))
 
   IPrintWithWriter
   (-pr-writer [coll writer opts]
     (print-map coll pr-writer writer opts)))
 
 (defn bean
-  "Takes a JavaScript object and returns a read-only implementation of the
-  map abstraction backed by the object."
+  "Takes a JavaScript object and returns a read-only implementation of the map
+  abstraction backed by the object. By default, bean produces beans that
+  keywordize the keys. Supply :keywordize-keys false to suppress this behavior.
+  You can alternatively supply :prop->key and :key->prop with functions that
+  controls the mapping between properties and keys. Calling (bean) produces an
+  empty bean."
+  ([]
+   (Bean. nil #js {} keyword #(.-fqn %) nil))
   ([x]
    (Bean. nil x keyword #(.-fqn %) nil))
   ([x & opts]
@@ -222,3 +307,13 @@
        (true? keywordize-keys) (bean x)
        (and (some? prop->key) (some? key->prop)) (Bean. nil x prop->key key->prop nil)
        :else (throw (js/Error ":keywordize-keys or both :prop->key and :key->prop must be specified"))))))
+
+(defn bean?
+  "Returns true if x is a bean."
+  [x]
+  (instance? Bean x))
+
+(defn object
+  "Takes a bean and returns a JavaScript object."
+  [bean]
+  (.-obj bean))
