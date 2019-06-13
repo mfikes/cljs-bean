@@ -32,9 +32,9 @@ The `bean` function behaves like Clojure’s in that it is not recursive:
 
 ## Object Extraction
 
-Applying `dissoc` on a bean produces a new bean. And, where possible, `assoc`, and `conj` on a bean produces a new bean. 
+Where possible, operations such as `assoc` and `conj` on a bean produces a new bean. 
 
-In these cases, the `bean?` predicate will be satisfied on the result. If so, `object` can be used to extract a JavaScript object from the bean:
+In these cases, the `bean?` predicate will be satisfied on the result. If so, `object` can be used to extract the wrapped JavaScript object from the bean:
 
 ```clojure
 (require '[cljs-bean.core :refer [bean bean? object]])
@@ -49,16 +49,17 @@ In these cases, the `bean?` predicate will be satisfied on the result. If so, `o
 ;; => #js {:a 1, :b 2}
 ```
 
-This provides flexible ways to create JavaScript objects:
+This enables flexible and efficient ways to create JavaScript objects using Clojure idioms. 
+
+For example, (via transducers and transients) the following builds up a JavaScript object using four operations to set property values:
 
 ```
-(->> (zipmap [:a :b :c] (range))
-     (into (bean #js {}))
-     object)
-;; => #js {:a 0, :b 1, :c 2}
+(let [m {:a 1, :b 2, :c 3, :d 4, :e 5, :f 6, :g 7, :h 8}]
+  (object (into (bean) (filter (comp odd? val)) m)))
+;; => #js {:a 1, :c 3, :e 5, :g 7}
 ```
 
-It is not possible for `assoc`, or `conj` to produce a bean if any keys added are incompatible:
+It is not possible for `assoc`, or `conj` to produce a bean if any of the keys added are incompatible:
 
 ```clojure
 (assoc (bean #js {:a 1}) "b" 2 :c 3)
