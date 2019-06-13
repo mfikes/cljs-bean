@@ -426,3 +426,47 @@
 (deftest seq-hash-test
   (is (== (hash (seq {:a 1})) (hash (seq (bean #js {:a 1})))))
   (is (== (hash (seq {"a" 1})) (hash (seq (bean #js {:a 1} :keywordize-keys false))))))
+
+(deftest transient-test
+  (is (bean? (persistent! (transient (bean)))))
+  (let [t (transient (bean))]
+    (persistent! t)
+    (is (thrown-with-msg? js/Error #"persistent! called twice" (persistent! t)))))
+
+(deftest assoc!-test
+  (is (= (persistent! (assoc! (transient (bean)) :a 1))) {:a 1})
+  (is (= (persistent! (assoc! (transient (bean)) :a 1 :b 2))) {:a 1, :b 2})
+  (is (= (persistent! (assoc! (transient (bean)) "a" 1))) {"a" 1})
+  (is (not (bean? (persistent! (assoc! (transient (bean)) "a" 1)))))
+  (let [t (doto (assoc! (transient (bean)) :a 1) persistent!)]
+    (is (thrown-with-msg? js/Error #"assoc! after persistent!" (assoc! t :x 1)))))
+
+(deftest conj!-test
+  (is (= (persistent! (conj! (transient (bean)) [:a 1]))) {:a 1})
+  (is (= (persistent! (conj! (transient (bean)) {:a 1}))) {:a 1})
+  (is (= (persistent! (conj! (transient (bean)) {:a 1, :b 2})) {:a 1, :b 2}))
+  (is (= (persistent! (conj! (transient (bean)) ["a" 1]))) {"a" 1})
+  (is (not (bean? (persistent! (conj! (transient (bean)) ["a" 1])))))
+  (let [t (doto (conj! (transient (bean)) [:a 1]) persistent!)]
+    (is (thrown-with-msg? js/Error #"conj! after persistent!" (conj! t :x 1)))))
+
+(deftest dissoc!-test
+  (is (= (persistent! (dissoc! (transient (bean #js {:a 1 :b 2})) :b))) {:a 1})
+  (is (= (persistent! (dissoc! (transient (bean #js {:a 1 :b 2})) :a :b))) {})
+  (let [t (doto (dissoc! (transient (bean #js {:a 1, :b 2})) :a) persistent!)]
+    (is (thrown-with-msg? js/Error #"dissoc! after persistent!" (dissoc! t :b)))))
+
+(deftest transient-lookup-test
+  (is (== 1 (:a (assoc! (transient (bean)) :a 1))))
+  (let [t (assoc! (transient (bean)) :a 1)]
+    (persistent! t)
+    (is (thrown-with-msg? js/Error #"lookup after persistent!" (:a t))))
+  (is (= :not-found (:b (assoc! (transient (bean)) :a 1) :not-found)))
+  (let [t (assoc! (transient (bean)) :a 1)]
+    (persistent! t)
+    (is (thrown-with-msg? js/Error #"lookup after persistent!" (:a t :not-found)))))
+
+(deftest transient-invoke-test
+  (is (== 1 ((assoc! (transient (bean)) :a 1) :a)))
+  (is (= :not-found ((assoc! (transient (bean)) :a 1) :b :not-found))))
+
