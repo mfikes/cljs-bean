@@ -2,7 +2,7 @@
 
 Like `clojure.core/bean`, but for ClojureScript.
 
-[![Clojars Project](https://img.shields.io/clojars/v/cljs-bean.svg)](https://clojars.org/cljs-bean) [![Build Status](https://travis-ci.org/mfikes/cljs-bean.svg?branch=master)](https://travis-ci.org/mfikes/cljs-bean)
+[![Clojars Project](https://img.shields.io/clojars/v/cljs-bean.svg)](https://clojars.org/cljs-bean) [![cljdoc badge](https://cljdoc.org/badge/cljs-bean/cljs-bean)](https://cljdoc.org/d/cljs-bean/cljs-bean/CURRENT) [![Build Status](https://travis-ci.org/mfikes/cljs-bean.svg?branch=master)](https://travis-ci.org/mfikes/cljs-bean)
 
 The `bean` function produces a thin wrapper over JavaScript objects, implementing the map abstraction:
 
