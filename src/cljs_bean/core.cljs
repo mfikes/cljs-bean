@@ -20,9 +20,9 @@
 
 (declare Bean)
 
-(deftype TransientBean [^:mutable ^boolean editable?
-                        obj prop->key key->prop
-                        ^:mutable __cnt]
+(deftype ^:private TransientBean [^:mutable ^boolean editable?
+                                  obj prop->key key->prop
+                                  ^:mutable __cnt]
   ILookup
   (-lookup [_ k]
     (if editable?
