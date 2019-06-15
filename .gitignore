@@ -1,3 +1,5 @@
 /cljs-test-runner-out
 /cljs-bean.jar
 /pom.xml
+/pom.xml.asc
+/target
