@@ -1,6 +1,11 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## Unreleased
+
+### Fixed
+- `TransientBean` should be private ([#17](https://github.com/mfikes/cljs-bean/issues/17))
+
 ## [0.5.0] - 2019-06-15
 ### Added
 - Support for `count` ([#12](https://github.com/mfikes/cljs-bean/issues/12))
