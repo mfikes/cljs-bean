@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file. This change
 ### Added
 - Support for `count` ([#12](https://github.com/mfikes/cljs-bean/issues/12))
 
+### Changed
+- Ship with copies of private fns ([#15](https://github.com/mfikes/cljs-bean/issues/15))
+
 ## [0.4.0] - 2019-06-13
 ### Added
 - `bean?` and `object` ([#10](https://github.com/mfikes/cljs-bean/issues/10))
