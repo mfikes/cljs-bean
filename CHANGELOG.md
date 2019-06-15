@@ -2,6 +2,8 @@
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
 ## [Unreleased]
+### Added
+- Support for `count` ([#12](https://github.com/mfikes/cljs-bean/issues/12))
 
 ## [0.4.0] - 2019-06-13
 ### Added

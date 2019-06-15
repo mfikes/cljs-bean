@@ -43,7 +43,7 @@
 (deftest empty-bean-test
   (is (bean? (bean)))
   (is (empty? (bean)))
-  (is (= (assoc (bean) :a 1) {:a 1})))
+  (is (= {:a 1} (assoc (bean) :a 1))))
 
 (deftest qualified-name-lookup
   (let [b (bean #js {"my-ns/my-name" 17})]
@@ -82,31 +82,43 @@
 
 (deftest clone-test
   (let [o (bean #js {:a 1})
+        _ (count o)
         c (clone o)]
     (is (= o c))
     (is (not (identical? o c)))
-    (is (nil? (meta c))))
+    (is (nil? (meta c)))
+    (is (== 1 (count c))))
   (let [o (bean #js {:a 1} :keywordize-keys false)
+        _ (count o)
         c (clone o)]
     (is (= o c))
     (is (not (identical? o c)))
-    (is (nil? (meta c))))
+    (is (nil? (meta c)))
+    (is (== 1 (count c))))
   (let [o (bean #js {:a 1, "a/b" 2, "d e" 3} :prop->key prop->key :key->prop key->prop)
+        _ (count o)
         c (clone o)]
     (is (= o c))
     (is (not (identical? o c)))
-    (is (nil? (meta c))))
+    (is (nil? (meta c)))
+    (is (== 3 (count o))))
   (let [o (with-meta (bean #js {:a 1}) {:foo true})
+        _ (count o)
         c (clone o)]
     (is (= o c))
     (is (not (identical? o c)))
-    (is (= {:foo true} (meta c)))))
+    (is (= {:foo true} (meta c)))
+    (is (== 1 (count c)))))
 
 (deftest meta-test
   (let [o (bean #js {:a 1})]
-    (= {:foo true} (meta (with-meta o {:foo true}))))
+    (count o)
+    (= {:foo true} (meta (with-meta o {:foo true})))
+    (==  1 (count (with-meta o {:foo true}))))
   (let [o (bean #js {:a 1} :keywordize-keys false)]
-    (= {:foo true} (meta (with-meta o {:foo true})))))
+    (count o)
+    (= {:foo true} (meta (with-meta o {:foo true})))
+    (== 1 (count (with-meta o {:foo true})))))
 
 (deftest conj-test
   (let [b (bean #js {:x 1})
@@ -114,23 +126,24 @@
         o (object m)]
     (is (map? m))
     (is (bean m))
-    (is (= m {:x 1 :y 2}))
+    (is (= {:x 1 :y 2} m))
     (is (#{["x" "y"] ["y" "x"]} (vec (js-keys o)))))
   (let [b (bean #js {:x 1})
         m (conj b ["y" 2])]
     (is (map? m))
     (is (not (bean? m)))
-    (is (= m {:x 1 "y" 2}))))
+    (is (= {:x 1 "y" 2} m))))
 
 (deftest empty-test
-  (is (= (empty (bean #js {:a 1})) {}))
+  (is (= {} (empty (bean #js {:a 1}))))
+  (is (zero? (count (empty (bean #js {:a 1})))))
   (is (empty? (empty (bean #js {:a 1}))))
   (is (bean? (empty (bean #js {:a 1}))))
   (let [m (with-meta (bean #js {:a 1}) {:foo true})]
     (= {:foo true} (meta (empty m))))
-  (is (= (assoc (empty (bean #js {:b 2})) :a 1) {:a 1}))
+  (is (= {:a 1} (assoc (empty (bean #js {:b 2})) :a 1)))
   (is (not (bean? (assoc (bean) "a" 1))))
-  (is (= (assoc (bean) "a" 1) {"a" 1})))
+  (is (= {"a" 1} (assoc (bean) "a" 1))))
 
 (deftest equiv-test
   (is (-equiv (bean #js {:a 1}) {:a 1}))
@@ -159,10 +172,14 @@
   (is (= [1] (vals (seq (bean #js {:a 1} :keywordize-keys false))))))
 
 (deftest count-test
-  (is (not (counted? (bean #js {:a 1}))))
+  (is (counted? (bean)))
   (is (== 0 (count (bean #js {}))))
   (is (== 1 (count (bean #js {:a 1}))))
-  (is (== 2 (count (bean #js {:a 1, :b 2})))))
+  (is (== 2 (count (bean #js {:a 1, :b 2}))))
+  (is (== 1 (count (assoc (bean) :a 1))))
+  (is (== 1 (count (assoc (bean #js {:a 1}) :a 1))))
+  (is (== 1 (count (-> (bean) (assoc :a 1) (dissoc :b)))))
+  (is (== 0 (count (-> (bean) (assoc :a 1) (dissoc :a))))))
 
 (deftest assoc-test
   (let [b (bean #js {:x 1})
@@ -170,27 +187,27 @@
         o (object m)]
     (is (map? m))
     (is (bean? m))
-    (is (= m {:x 1 :y 2}))
+    (is (= {:x 1 :y 2} m))
     (is (== 1 (unchecked-get o "x")))
     (is (== 2 (unchecked-get o "y"))))
   (let [b (bean #js {:x 1})
         m (assoc b "y" 2)]
     (is (map? m))
     (is (not (bean? m)))
-    (is (= m {:x 1 "y" 2})))
+    (is (= {:x 1 "y" 2} m)))
   (let [b (bean #js {:x 1} :keywordize-keys false)
         m (assoc b "y" 2)
         o (object m)]
     (is (map? m))
     (is (bean? m))
-    (is (= m {"x" 1 "y" 2}))
+    (is (= {"x" 1 "y" 2} m))
     (is (== 1 (unchecked-get o "x")))
     (is (== 2 (unchecked-get o "y"))))
   (let [b (bean #js {:x 1} :keywordize-keys false)
         m (assoc b :y 2)]
     (is (map? m))
     (is (not (bean? m)))
-    (is (= m {"x" 1 :y 2}))))
+    (is (= {"x" 1 :y 2} m))))
 
 (deftest contains?-test
   (let [b (bean color-black)]
@@ -211,14 +228,14 @@
   (let [b (bean #js {:a 1, :b 2})
         m (dissoc b :b)
         o (object m)]
-    (is (= m {:a 1}))
+    (is (= {:a 1} m))
     (is (bean? m))
     (is (= ["a"] (vec (js-keys o))))
     (is (== 1 (unchecked-get o "a"))))
   (let [b (bean #js {:a 1, :b 2})
         m (dissoc b "c")
         o (object m)]
-    (is (= m {:a 1, :b 2}))
+    (is (= {:a 1, :b 2} m))
     (is (bean? m))
     (is (#{["a" "b"] ["b" "a"]} (vec (js-keys o))))
     (is (== 1 (unchecked-get o "a")))
@@ -226,14 +243,14 @@
   (let [b (bean #js {:a 1, :b 2} :keywordize-keys false)
         m (dissoc b "b")
         o (object m)]
-    (is (= m {"a" 1}))
+    (is (= {"a" 1} m))
     (is (bean? m))
     (is (= ["a"] (vec (js-keys o))))
     (is (== 1 (unchecked-get o "a"))))
   (let [b (bean #js {:a 1, :b 2} :keywordize-keys false)
         m (dissoc b :c)
         o (object m)]
-    (is (= m {"a" 1, "b" 2}))
+    (is (= {"a" 1, "b" 2} m))
     (is (bean? m))
     (is (#{["a" "b"] ["b" "a"]} (vec (js-keys o))))
     (is (== 1 (unchecked-get o "a")))
@@ -269,7 +286,7 @@
   (is (= {:a 1, "b" 2} (into (bean #js {}) [[:a 1] ["b" 2]])))
   (is (not (bean? (into (bean #js {}) [["a" 1] [:b 2]]))))
   (is (= {"a" 1, :b 2} (into (bean #js {}) [["a" 1] [:b 2]])))
-  (is (= (into (bean #js {:a 1} :keywordize-keys false) {"b" 2}) {"a" 1, "b" 2})))
+  (is (= {"a" 1, "b" 2} (into (bean #js {:a 1} :keywordize-keys false) {"b" 2}))))
 
 (deftest bean?-test
   (is (bean? (bean #js {:a 1})))
@@ -433,26 +450,53 @@
     (persistent! t)
     (is (thrown-with-msg? js/Error #"persistent! called twice" (persistent! t)))))
 
+(deftest transient-count-test
+  (is (counted? (transient (bean))))
+  (is (== 0 (count (transient (bean)))))
+  (is (== 0 (count (transient (bean #js {})))))
+  (is (== 1 (count (transient (bean #js {:a 1})))))
+  (is (== 2 (count (transient (bean #js {:a 1, :b 2})))))
+  (let [b (bean #js {})]
+    (count b)
+    (is (== 0 (count (transient b)))))
+  (let [b (bean #js {:a 1})]
+    (count b)
+    (is (== 1 (count (transient b)))))
+  (let [b (bean #js {:a 1, :b 2})]
+    (count b)
+    (is (== 2 (count (transient b)))))
+  (is (== 1 (count (assoc! (transient (bean)) :a 1))))
+  (is (== 1 (count (assoc! (transient (bean #js {:a 1})) :a 1))))
+  (let [b (bean #js {})]
+    (count b)
+    (is (== 1 (count (assoc! (transient b) :a 1)))))
+  (let [b (bean #js {:a 1})]
+    (count b)
+    (is (== 1 (count (assoc! (transient b) :a 1)))))
+  (is (== 1 (count (-> (transient (bean)) (assoc! :a 1) (dissoc! :b)))))
+  (is (== 0 (count (-> (transient (bean)) (assoc! :a 1) (dissoc! :a)))))
+  (is (== 1 (count (persistent! (-> (transient (bean)) (assoc! :a 1)))))))
+
 (deftest assoc!-test
-  (is (= (persistent! (assoc! (transient (bean)) :a 1))) {:a 1})
-  (is (= (persistent! (assoc! (transient (bean)) :a 1 :b 2))) {:a 1, :b 2})
-  (is (= (persistent! (assoc! (transient (bean)) "a" 1))) {"a" 1})
+  (is (= {:a 1} (persistent! (assoc! (transient (bean)) :a 1))))
+  (is (= {:a 1, :b 2} (persistent! (assoc! (transient (bean)) :a 1 :b 2))))
+  (is (= {"a" 1} (persistent! (assoc! (transient (bean)) "a" 1))))
   (is (not (bean? (persistent! (assoc! (transient (bean)) "a" 1)))))
   (let [t (doto (assoc! (transient (bean)) :a 1) persistent!)]
     (is (thrown-with-msg? js/Error #"assoc! after persistent!" (assoc! t :x 1)))))
 
 (deftest conj!-test
-  (is (= (persistent! (conj! (transient (bean)) [:a 1]))) {:a 1})
-  (is (= (persistent! (conj! (transient (bean)) {:a 1}))) {:a 1})
-  (is (= (persistent! (conj! (transient (bean)) {:a 1, :b 2})) {:a 1, :b 2}))
-  (is (= (persistent! (conj! (transient (bean)) ["a" 1]))) {"a" 1})
+  (is (= {:a 1} (persistent! (conj! (transient (bean)) [:a 1]))))
+  (is (= {:a 1} (persistent! (conj! (transient (bean)) {:a 1}))))
+  (is (= {:a 1, :b 2} (persistent! (conj! (transient (bean)) {:a 1, :b 2}))))
+  (is (= {"a" 1} (persistent! (conj! (transient (bean)) ["a" 1]))))
   (is (not (bean? (persistent! (conj! (transient (bean)) ["a" 1])))))
   (let [t (doto (conj! (transient (bean)) [:a 1]) persistent!)]
     (is (thrown-with-msg? js/Error #"conj! after persistent!" (conj! t :x 1)))))
 
 (deftest dissoc!-test
-  (is (= (persistent! (dissoc! (transient (bean #js {:a 1 :b 2})) :b))) {:a 1})
-  (is (= (persistent! (dissoc! (transient (bean #js {:a 1 :b 2})) :a :b))) {})
+  (is (= {:a 1} (persistent! (dissoc! (transient (bean #js {:a 1 :b 2})) :b))))
+  (is (= {} (persistent! (dissoc! (transient (bean #js {:a 1 :b 2})) :a :b))))
   (let [t (doto (dissoc! (transient (bean #js {:a 1, :b 2})) :a) persistent!)]
     (is (thrown-with-msg? js/Error #"dissoc! after persistent!" (dissoc! t :b)))))
 

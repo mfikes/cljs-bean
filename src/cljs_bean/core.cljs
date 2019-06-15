@@ -21,7 +21,8 @@
 (declare Bean)
 
 (deftype TransientBean [^:mutable ^boolean editable?
-                        obj prop->key key->prop]
+                        obj prop->key key->prop
+                        ^:mutable __cnt]
   ILookup
   (-lookup [_ k]
     (if editable?
@@ -31,6 +32,12 @@
     (if editable?
       (gobj/get obj (key->prop k) not-found)
       (throw (js/Error. "lookup after persistent!"))))
+
+  ICounted
+  (-count [_]
+    (if (nil? __cnt)
+      (set! __cnt (count (js-keys obj)))
+      __cnt))
 
   ITransientCollection
   (-conj! [tcoll o]
@@ -54,7 +61,7 @@
     (if editable?
       (do
         (set! editable? false)
-        (Bean. nil obj prop->key key->prop nil))
+        (Bean. nil obj prop->key key->prop __cnt nil))
       (throw (js/Error. "persistent! called twice"))))
 
   ITransientAssociative
@@ -63,6 +70,7 @@
       (if (compatible-key? k prop->key)
         (do
           (unchecked-set obj (key->prop k) v)
+          (set! __cnt nil)
           tcoll)
         (-assoc! (transient (snapshot obj prop->key)) k v))
       (throw (js/Error. "assoc! after persistent!"))))
@@ -70,8 +78,9 @@
   ITransientMap
   (-dissoc! [tcoll k]
     (if editable?
-      (do
-        (js-delete obj (key->prop k))
+      (let [deleted? (js-delete obj (key->prop k))]
+        (when (and deleted? __cnt)
+          (set! __cnt (dec __cnt)))
         tcoll)
       (throw (js/Error. "dissoc! after persistent!"))))
 
@@ -166,7 +175,7 @@
 (declare ^{:arglists '([x])} bean?)
 (declare ^{:arglists '([bean])} object)
 
-(deftype ^:private Bean [meta obj prop->key key->prop ^:mutable __hash]
+(deftype ^:private Bean [meta obj prop->key key->prop ^:mutable __cnt ^:mutable __hash]
   Object
   (toString [coll]
     (pr-str* coll))
@@ -188,13 +197,13 @@
       (f v k)))
 
   ICloneable
-  (-clone [_] (Bean. meta obj prop->key key->prop __hash))
+  (-clone [_] (Bean. meta obj prop->key key->prop __cnt __hash))
 
   IWithMeta
   (-with-meta [coll new-meta]
     (if (identical? new-meta meta)
       coll
-      (Bean. new-meta obj prop->key key->prop __hash)))
+      (Bean. new-meta obj prop->key key->prop __cnt __hash)))
 
   IMeta
   (-meta [_] meta)
@@ -212,7 +221,7 @@
               (throw (js/Error. "conj on a map takes map entries or seqables of map entries"))))))))
 
   IEmptyableCollection
-  (-empty [_] (Bean. meta #js {} prop->key key->prop nil))
+  (-empty [_] (Bean. meta #js {} prop->key key->prop 0 nil))
 
   IEquiv
   (-equiv [coll other]
@@ -232,7 +241,7 @@
     (if (compatible-key? k prop->key)
       (Bean. nil
         (doto (gobj/clone obj) (unchecked-set (key->prop k) v))
-        prop->key key->prop nil)
+        prop->key key->prop nil nil)
       (-assoc (snapshot obj prop->key) k v)))
 
   (-contains-key? [coll k]
@@ -246,9 +255,17 @@
 
   IMap
   (-dissoc [_ k]
-    (Bean. nil
-      (doto (gobj/clone obj) (js-delete (key->prop k)))
-      prop->key key->prop nil))
+    (let [obj'     (gobj/clone obj)
+          deleted? (js-delete obj' (key->prop k))
+          cnt' (when (and __cnt deleted?)
+                 (dec __cnt))]
+      (Bean. nil obj' prop->key key->prop cnt' nil)))
+
+  ICounted
+  (-count [_]
+    (if (nil? __cnt)
+      (set! __cnt (count (js-keys obj)))
+      __cnt))
 
   ILookup
   (-lookup [_ k]
@@ -283,7 +300,7 @@
 
   IEditableCollection
   (-as-transient [_]
-    (TransientBean. true (gobj/clone obj) prop->key key->prop))
+    (TransientBean. true (gobj/clone obj) prop->key key->prop __cnt))
 
   IPrintWithWriter
   (-pr-writer [coll writer opts]
@@ -297,15 +314,15 @@
   controls the mapping between properties and keys. Calling (bean) produces an
   empty bean."
   ([]
-   (Bean. nil #js {} keyword #(.-fqn %) nil))
+   (Bean. nil #js {} keyword #(.-fqn %) 0 nil))
   ([x]
-   (Bean. nil x keyword #(.-fqn %) nil))
+   (Bean. nil x keyword #(.-fqn %) nil nil))
   ([x & opts]
    (let [{:keys [keywordize-keys prop->key key->prop]} opts]
      (cond
-       (false? keywordize-keys) (Bean. nil x identity identity nil)
+       (false? keywordize-keys) (Bean. nil x identity identity nil nil)
        (true? keywordize-keys) (bean x)
-       (and (some? prop->key) (some? key->prop)) (Bean. nil x prop->key key->prop nil)
+       (and (some? prop->key) (some? key->prop)) (Bean. nil x prop->key key->prop nil nil)
        :else (throw (js/Error ":keywordize-keys or both :prop->key and :key->prop must be specified"))))))
 
 (defn bean?
