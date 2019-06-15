@@ -151,7 +151,16 @@
 
   ISequential
   IEquiv
-  (-equiv [coll other] (equiv-sequential coll other))
+  (-equiv [coll other]
+    (boolean
+      (when (sequential? other)
+        (if (and (counted? other) (not (== (-count coll) (-count other))))
+          false
+          (loop [xs (-seq coll) ys (seq other)]
+            (cond (nil? xs) (nil? ys)
+                  (nil? ys) false
+                  (= (first xs) (first ys)) (recur (next xs) (next ys))
+                  :else false))))))
 
   ICollection
   (-conj [coll o] (cons o coll))
@@ -161,9 +170,23 @@
 
   IReduce
   (-reduce [coll f]
-    (ci-reduce coll f (bean-seq-entry obj prop->key arr i) (inc i)))
+    (let [cnt (-count coll)]
+      (loop [val (bean-seq-entry obj prop->key arr i), n (inc i)]
+        (if (< n cnt)
+          (let [nval (f val (-nth coll n))]
+            (if (reduced? nval)
+              @nval
+              (recur nval (inc n))))
+          val))))
   (-reduce [coll f start]
-    (ci-reduce coll f start i))
+    (let [cnt (-count coll)]
+      (loop [val start, n i]
+        (if (< n cnt)
+          (let [nval (f val (-nth coll n))]
+            (if (reduced? nval)
+              @nval
+              (recur nval (inc n))))
+          val))))
 
   IHash
   (-hash [coll] (hash-ordered-coll coll))
