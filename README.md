@@ -33,7 +33,7 @@ The `bean` function behaves like Clojure’s in that it is not recursive:
 
 ## Object Extraction
 
-Where possible, operations such as `assoc` and `conj` on a bean produces a new bean. 
+Where possible, operations such as `assoc` and `conj` on a bean produce a new bean. 
 
 In these cases, the `bean?` predicate will be satisfied on the result. If so, `object` 
 can be used to extract the wrapped JavaScript object from the bean:
@@ -53,8 +53,7 @@ can be used to extract the wrapped JavaScript object from the bean:
 
 This enables flexible and efficient ways to create JavaScript objects using Clojure idioms. 
 
-For example, (via transducers and transients) the following builds up a JavaScript object 
-using four operations to set property values:
+For example, the following builds up a JavaScript object, setting its property values:
 
 ```clojure
 (let [m {:a 1, :b 2, :c 3, :d 4, :e 5, :f 6, :g 7, :h 8}]
@@ -62,7 +61,8 @@ using four operations to set property values:
 ;; => #js {:a 1, :c 3, :e 5, :g 7}
 ```
 
-It is not possible for `assoc`, or `conj` to produce a bean if any of the keys added are incompatible:
+It is not possible for `assoc` or `conj` to produce a bean if, for example, a string key is
+added to a bean configured to keywordize keys:
 
 ```clojure
 (assoc (bean #js {:a 1}) "b" 2 :c 3)
@@ -83,7 +83,8 @@ string keys will be produced:
 ```
 
 You can control the key to property name mapping by supplying both `:key->prop` and `:prop->key`.
-Here is an example that mimics the behavior of ClojureScript's JavaScript object literal syntax, where
+
+The following example mimics the behavior of ClojureScript's JavaScript object literal syntax, where
 keywords are used only if properties can be represented as simple keywords:
 
 ```clojure
