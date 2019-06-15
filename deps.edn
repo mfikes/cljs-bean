@@ -5,15 +5,4 @@
                      :main-opts ["-m" "cljs.main" "-re" "node"]}
          :test      {:extra-deps  {olical/cljs-test-runner {:mvn/version "3.5.0"}}
                      :extra-paths ["test" "cljs-test-runner-out/gen"]
-                     :main-opts   ["-m" "cljs-test-runner.main"]}
-         :jar       {:extra-deps {pack/pack.alpha
-                                  {:git/url "https://github.com/juxt/pack.alpha.git"
-                                   :sha     "8acf80dd4d6e5173585f5c6fec7af28a310f3ed7"}}
-                     :main-opts  ["-m" "mach.pack.alpha.skinny" "--no-libs"
-                                  "--project-path" "cljs-bean.jar"]}
-         :install   {:extra-deps {deps-deploy {:mvn/version "RELEASE"}}
-                     :main-opts  ["-m" "deps-deploy.deps-deploy" "install"
-                                  "cljs-bean.jar"]}
-         :deploy    {:extra-deps {deps-deploy {:mvn/version "RELEASE"}}
-                     :main-opts  ["-m" "deps-deploy.deps-deploy" "deploy"
-                                  "cljs-bean.jar"]}}}
+                     :main-opts   ["-m" "cljs-test-runner.main"]}}}
