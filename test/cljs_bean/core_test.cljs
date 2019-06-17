@@ -113,12 +113,22 @@
 (deftest meta-test
   (let [o (bean #js {:a 1})]
     (count o)
-    (= {:foo true} (meta (with-meta o {:foo true})))
-    (==  1 (count (with-meta o {:foo true}))))
+    (is (= {:foo true} (meta (with-meta o {:foo true}))))
+    (is (== 1 (count (with-meta o {:foo true})))))
   (let [o (bean #js {:a 1} :keywordize-keys false)]
     (count o)
-    (= {:foo true} (meta (with-meta o {:foo true})))
-    (== 1 (count (with-meta o {:foo true})))))
+    (is (= {:foo true} (meta (with-meta o {:foo true}))))
+    (is (== 1 (count (with-meta o {:foo true})))))
+  (let [m {:x 1}]
+    (is (= m (meta (dissoc (with-meta (bean #js {:a 1}) m) :a))))
+    (is (= m (meta (dissoc (with-meta (bean #js {:a 1}) m) :b)))))
+  (let [m {:x 1}]
+    (is (= m (meta (assoc (with-meta (bean #js {:a 1}) m) :b 2))))
+    (is (= m (meta (assoc (with-meta (bean #js {:a 1}) m) :a 1))))
+    (is (= m (meta (assoc (with-meta (bean #js {:a 1}) m) "c" 1)))))
+  (let [m {:x 1}]
+    (is (= m (meta (conj (with-meta (bean #js {:a 1}) m) [:b 2]))))
+    (is (= m (meta (conj (with-meta (bean #js {:a 1}) m) [:a 1]))))))
 
 (deftest conj-test
   (let [b (bean #js {:x 1})

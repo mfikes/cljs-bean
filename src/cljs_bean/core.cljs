@@ -262,10 +262,10 @@
   IAssociative
   (-assoc [_ k v]
     (if (compatible-key? k prop->key)
-      (Bean. nil
+      (Bean. meta
         (doto (gobj/clone obj) (unchecked-set (key->prop k) v))
         prop->key key->prop nil nil)
-      (-assoc (snapshot obj prop->key) k v)))
+      (-assoc (with-meta (snapshot obj prop->key) meta) k v)))
 
   (-contains-key? [coll k]
     (contains? coll k))
@@ -282,7 +282,7 @@
           deleted? (js-delete obj' (key->prop k))
           cnt' (when (and __cnt deleted?)
                  (dec __cnt))]
-      (Bean. nil obj' prop->key key->prop cnt' nil)))
+      (Bean. meta obj' prop->key key->prop cnt' nil)))
 
   ICounted
   (-count [_]

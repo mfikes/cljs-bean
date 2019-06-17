@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file. This change
 
 ### Fixed
 - `TransientBean` should be private ([#17](https://github.com/mfikes/cljs-bean/issues/17))
+- meta not preserved with `assoc`, `dissoc`, `conj` ([#20](https://github.com/mfikes/cljs-bean/issues/20))
 
 ## [0.5.0] - 2019-06-15
 ### Added
