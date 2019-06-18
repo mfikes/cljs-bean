@@ -329,6 +329,10 @@
   (-pr-writer [coll writer opts]
     (print-map coll pr-writer writer opts)))
 
+(defn- default-key->prop [x]
+  (when (keyword? x)
+    (.-fqn x)))
+
 (defn bean
   "Takes a JavaScript object and returns a read-only implementation of the map
   abstraction backed by the object. By default, bean produces beans that
@@ -337,9 +341,9 @@
   controls the mapping between properties and keys. Calling (bean) produces an
   empty bean."
   ([]
-   (Bean. nil #js {} keyword #(.-fqn %) 0 nil))
+   (Bean. nil #js {} keyword default-key->prop 0 nil))
   ([x]
-   (Bean. nil x keyword #(.-fqn %) nil nil))
+   (Bean. nil x keyword default-key->prop nil nil))
   ([x & opts]
    (let [{:keys [keywordize-keys prop->key key->prop]} opts]
      (cond
