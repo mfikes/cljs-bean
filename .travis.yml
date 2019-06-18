@@ -6,11 +6,17 @@ install:
   - curl -O https://download.clojure.org/install/linux-install-1.9.0.375.sh
   - chmod +x linux-install-1.9.0.375.sh
   - sudo ./linux-install-1.9.0.375.sh
+  - curl -LO https://github.com/anmonteiro/lumo/releases/download/1.10.1/lumo_linux64.gz
+  - gunzip lumo_linux64.gz
+  - chmod +x lumo_linux64
+  - sudo mv lumo_linux64 /usr/local/bin/lumo
   - sudo add-apt-repository -y ppa:mfikes/planck
   - sudo apt-get update -y
   - sudo apt-get install -y planck
 
 script:
   - if [[ $CANARY_CLOJURESCRIPT_REPO && ${CANARY_CLOJURESCRIPT_REPO-x} ]]; then DEPS="{:deps {org.clojure/clojurescript {:git/url \"${CANARY_CLOJURESCRIPT_REPO}\" :sha \"${CANARY_CLOJURESCRIPT_REV}\"}}}"; fi
+  - clojure -Sdeps "${DEPS:-{}}" -A:test
   - clojure -Sdeps "${DEPS:-{}}" -A:test -c '{:optimizations :advanced}'
+  - clojure -Sdeps "${DEPS:-{}}" -A:test -x lumo
   - clojure -Sdeps "${DEPS:-{}}" -A:test -x planck
