@@ -45,6 +45,16 @@
   (is (empty? (bean)))
   (is (= {:a 1} (assoc (bean) :a 1))))
 
+(defrecord Lu [fqn])
+
+(deftest keyword-lookup-test
+  (let [b (bean #js {:a 1})]
+    (is (contains? b :a))
+    (is (== 1 (:a b)))
+    (is (== 1 (b :a)))
+    (is (not (contains? b (->Lu "a"))))
+    (is (nil? (b (->Lu "a"))))))
+
 (deftest qualified-name-lookup
   (let [b (bean #js {"my-ns/my-name" 17})]
     (is (= 17 (get b :my-ns/my-name))))
