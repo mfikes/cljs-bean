@@ -51,15 +51,19 @@ can be used to extract the wrapped JavaScript object from the bean:
 ;; => #js {:a 1, :b 2}
 ```
 
-This enables flexible and efficient ways to create JavaScript objects using Clojure idioms. 
+This enables flexible and efficient ways to create JavaScript objects using Clojure idioms, without having to reach for `clj->js`.
 
-For example, the following builds up a JavaScript object, setting its property values:
+For example, the following builds a JavaScript object, setting its property values:
 
 ```clojure
 (let [m {:a 1, :b 2, :c 3, :d 4, :e 5, :f 6, :g 7, :h 8}]
   (object (into (bean) (filter (comp odd? val)) m)))
 ;; => #js {:a 1, :c 3, :e 5, :g 7}
 ```
+
+The example above is particularly efficient because no intermediate sequence is 
+generated and—owing to transients support in beans—the properties are set by 
+mutating a single object instance.
 
 It is not possible for `assoc` or `conj` to produce a bean if, for example, a string key is
 added to a bean configured to keywordize keys:
