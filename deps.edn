@@ -3,6 +3,6 @@
  :aliases
         {:repl/node {:extra-paths ["test"]
                      :main-opts ["-m" "cljs.main" "-re" "node"]}
-         :test      {:extra-deps  {olical/cljs-test-runner {:mvn/version "3.6.0"}}
+         :test      {:extra-deps  {olical/cljs-test-runner {:mvn/version "3.7.0"}}
                      :extra-paths ["test" "cljs-test-runner-out/gen"]
                      :main-opts   ["-m" "cljs-test-runner.main"]}}}
