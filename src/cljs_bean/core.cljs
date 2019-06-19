@@ -196,7 +196,7 @@
     (pr-sequential-writer writer pr-writer "(" " " ")" opts coll)))
 
 (declare ^{:arglists '([x])} bean?)
-(declare ^{:arglists '([bean])} object)
+(declare ^{:arglists '([b])} object)
 
 (deftype ^:private Bean [meta obj prop->key key->prop ^:mutable __cnt ^:mutable __hash]
   Object
@@ -359,5 +359,5 @@
 
 (defn object
   "Takes a bean and returns a JavaScript object."
-  [bean]
-  (.-obj bean))
+  [b]
+  (.-obj b))
