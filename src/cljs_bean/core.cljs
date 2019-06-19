@@ -335,11 +335,12 @@
 
 (defn bean
   "Takes a JavaScript object and returns a read-only implementation of the map
-  abstraction backed by the object. By default, bean produces beans that
-  keywordize the keys. Supply :keywordize-keys false to suppress this behavior.
-  You can alternatively supply :prop->key and :key->prop with functions that
-  controls the mapping between properties and keys. Calling (bean) produces an
-  empty bean."
+  abstraction backed by the object.
+
+  By default, bean produces beans that keywordize the keys. Supply
+  :keywordize-keys false to suppress this behavior. You can alternatively
+  supply :prop->key and :key->prop with functions that controls the mapping
+  between properties and keys. Calling (bean) produces an empty bean."
   ([]
    (Bean. nil #js {} keyword default-key->prop 0 nil))
   ([x]
