@@ -85,10 +85,14 @@
       (throw (js/Error. "dissoc! after persistent!"))))
 
   IFn
-  (-invoke [tcoll key]
-    (-lookup tcoll key nil))
-  (-invoke [tcoll key not-found]
-    (-lookup tcoll key not-found)))
+  (-invoke [_ k]
+    (if editable?
+      (unchecked-get obj (key->prop k))
+      (throw (js/Error. "lookup after persistent!"))))
+  (-invoke [_ k not-found]
+    (if editable?
+      (gobj/get obj (key->prop k) not-found)
+      (throw (js/Error. "lookup after persistent!")))))
 
 (deftype ^:private BeanSeq [obj prop->key arr i meta]
   Object
@@ -271,8 +275,8 @@
     (contains? coll k))
 
   IFind
-  (-find [coll k]
-    (let [v (-lookup coll k lookup-sentinel)]
+  (-find [_ k]
+    (let [v (gobj/get obj (key->prop k) lookup-sentinel)]
       (when-not (identical? v lookup-sentinel)
         (MapEntry. k v nil))))
 
@@ -315,11 +319,11 @@
     (-kv-reduce coll (fn [r k v] (f r (MapEntry. k v nil))) start))
 
   IFn
-  (-invoke [coll k]
-    (-lookup coll k))
+  (-invoke [_ k]
+    (unchecked-get obj (key->prop k)))
 
-  (-invoke [coll k not-found]
-    (-lookup coll k not-found))
+  (-invoke [_ k not-found]
+    (gobj/get obj (key->prop k) not-found))
 
   IEditableCollection
   (-as-transient [_]

@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## [Unreleased]
+### Changed
+- Inline `-lookup` calls ([#27](https://github.com/mfikes/cljs-bean/issues/27))
+
 ## [0.6.0] - 2019-06-18
 ### Fixed
 - `TransientBean` should be private ([#17](https://github.com/mfikes/cljs-bean/issues/17))
@@ -34,6 +38,7 @@ All notable changes to this project will be documented in this file. This change
 ### Added
 - Initial release.
 
+[Unreleased]: https://github.com/mfikes/cljs-bean/compare/0.6.0...HEAD
 [0.6.0]: https://github.com/mfikes/cljs-bean/compare/0.5.0...0.6.0
 [0.5.0]: https://github.com/mfikes/cljs-bean/compare/0.4.0...0.5.0
 [0.4.0]: https://github.com/mfikes/cljs-bean/compare/0.3.0...0.4.0
