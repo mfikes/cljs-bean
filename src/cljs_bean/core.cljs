@@ -362,7 +362,7 @@
   [x]
   (instance? Bean x))
 
-(defn object
+(defn ^js object
   "Takes a bean and returns a JavaScript object."
   [b]
   (.-obj b))

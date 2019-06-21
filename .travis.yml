@@ -17,6 +17,6 @@ install:
 script:
   - if [[ $CANARY_CLOJURESCRIPT_REPO && ${CANARY_CLOJURESCRIPT_REPO-x} ]]; then DEPS="{:deps {org.clojure/clojurescript {:git/url \"${CANARY_CLOJURESCRIPT_REPO}\" :sha \"${CANARY_CLOJURESCRIPT_REV}\"}}}"; fi
   - clojure -Sdeps "${DEPS:-{}}" -A:test
-  - clojure -Sdeps "${DEPS:-{}}" -A:test -c '{:optimizations :advanced}'
+  - clojure -Sdeps "${DEPS:-{}}" -A:test -c '{:optimizations :advanced :infer-externs true}'
   - clojure -Sdeps "${DEPS:-{}}" -A:test -x lumo
   - clojure -Sdeps "${DEPS:-{}}" -A:test -x planck
