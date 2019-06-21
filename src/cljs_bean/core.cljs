@@ -9,7 +9,7 @@
     (gobj/forEach x (fn [v k _] (vswap! result assoc! (prop->key k) v)))
     (persistent! @result)))
 
-(defn- bean-seq-entry [obj prop->key arr i]
+(defn- indexed-entry [obj prop->key arr i]
   (let [prop (aget arr i)]
     (MapEntry. (prop->key prop) (unchecked-get obj prop) nil)))
 
@@ -94,6 +94,15 @@
       (gobj/get obj (key->prop k) not-found)
       (throw (js/Error. "lookup after persistent!")))))
 
+(deftype ^:private BeanIterator [obj prop->key arr ^:mutable i cnt]
+  Object
+  (hasNext [_]
+    (< i cnt))
+  (next [_]
+    (let [ret (indexed-entry obj prop->key arr i)]
+      (set! i (inc i))
+      ret)))
+
 (deftype ^:private BeanSeq [obj prop->key arr i meta]
   Object
   (toString [coll]
@@ -127,7 +136,7 @@
 
   ASeq
   ISeq
-  (-first [_] (bean-seq-entry obj prop->key arr i))
+  (-first [_] (indexed-entry obj prop->key arr i))
   (-rest [_] (if (< (inc i) (alength arr))
                (BeanSeq. obj prop->key arr (inc i) nil)
                ()))
@@ -145,12 +154,12 @@
   (-nth [_ n]
     (let [i (+ n i)]
       (if (and (<= 0 i) (< i (alength arr)))
-        (bean-seq-entry obj prop->key arr i)
+        (indexed-entry obj prop->key arr i)
         (throw (js/Error. "Index out of bounds")))))
   (-nth [_ n not-found]
     (let [i (+ n i)]
       (if (and (<= 0 i) (< i (alength arr)))
-        (bean-seq-entry obj prop->key arr i)
+        (indexed-entry obj prop->key arr i)
         not-found)))
 
   ISequential
@@ -175,7 +184,7 @@
   IReduce
   (-reduce [coll f]
     (let [cnt (-count coll)]
-      (loop [val (bean-seq-entry obj prop->key arr i), n (inc i)]
+      (loop [val (indexed-entry obj prop->key arr i), n (inc i)]
         (if (< n cnt)
           (let [nval (f val (-nth coll n))]
             (if (reduced? nval)
@@ -256,6 +265,10 @@
 
   IHash
   (-hash [coll] (caching-hash coll hash-unordered-coll __hash))
+
+  IIterable
+  (-iterator [coll]
+    (BeanIterator. obj prop->key (js-keys obj) 0 (-count coll)))
 
   ISeqable
   (-seq [_]

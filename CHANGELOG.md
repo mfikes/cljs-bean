@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file. This change
 ## [Unreleased]
 ### Changed
 - Type hint return type of `object` ([#31](https://github.com/mfikes/cljs-bean/issues/31))
+- Support for `IIterable` ([#32](https://github.com/mfikes/cljs-bean/issues/32))
 
 ## [1.0.0] - 2019-06-20
 ### Changed
