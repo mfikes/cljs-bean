@@ -534,3 +534,6 @@
   (is (== 1 ((assoc! (transient (bean)) :a 1) :a)))
   (is (= :not-found ((assoc! (transient (bean)) :a 1) :b :not-found))))
 
+(deftest object-hint-test
+  (let [b (bean #js {:myInc (fn [x] (inc x))})]
+    (is (= 2 (.myInc (object b) 1)))))
