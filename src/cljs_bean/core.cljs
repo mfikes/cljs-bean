@@ -78,9 +78,9 @@
   ITransientMap
   (-dissoc! [tcoll k]
     (if editable?
-      (let [deleted? (js-delete obj (key->prop k))]
-        (when (and deleted? __cnt)
-          (set! __cnt (dec __cnt)))
+      (do
+        (js-delete obj (key->prop k))
+        (set! __cnt nil)
         tcoll)
       (throw (js/Error. "dissoc! after persistent!"))))
 
@@ -282,11 +282,8 @@
 
   IMap
   (-dissoc [_ k]
-    (let [obj'     (gobj/clone obj)
-          deleted? (js-delete obj' (key->prop k))
-          cnt' (when (and __cnt deleted?)
-                 (dec __cnt))]
-      (Bean. meta obj' prop->key key->prop cnt' nil)))
+    (Bean. meta (doto (gobj/clone obj) (js-delete (key->prop k)))
+      prop->key key->prop nil nil))
 
   ICounted
   (-count [_]
