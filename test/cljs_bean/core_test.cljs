@@ -491,6 +491,47 @@
   (is (== (hash (seq {:a 1})) (hash (seq (bean #js {:a 1})))))
   (is (== (hash (seq {"a" 1})) (hash (seq (bean #js {:a 1} :keywordize-keys false))))))
 
+(defn seq-iter-match
+  [coll]
+  (let [i (-iterator coll)]
+    (loop [s (seq coll)
+           n 0]
+      (if (seq s)
+        (do
+          (when-not (.hasNext i)
+            (throw
+              (js/Error.
+                (str  "Iterator exhausted before seq at(" n ")" ))))
+          (let [iv (.next i)
+                sv (first s)]
+            (when-not (= iv sv)
+              (throw
+                (js/Error.
+                  (str "Iterator value " iv " and seq value " sv " did not match at ( "  n ")")))))
+          (recur (rest s) (inc n)))
+        (if (.hasNext i)
+          (throw
+            (js/Error.
+              (str  "Seq exhausted before iterator at (" n ")")))
+          true)))))
+
+(deftest coll-iter-seq-match
+  (is (seq-iter-match (bean)))
+  (is (seq-iter-match (bean #js {:a 1})))
+  (is (seq-iter-match (bean #js {:a 1, :b 2})))
+  (is (seq-iter-match (bean #js {} :keywordize-keys false)))
+  (is (seq-iter-match (bean #js {:a 1} :keywordize-keys false)))
+  (is (seq-iter-match (bean #js {:a 1, :b 2} :keywordize-keys false)))
+  (is (seq-iter-match (bean #js {} :prop->key prop->key :key->prop key->prop)))
+  (is (seq-iter-match (bean #js {:a 1} :prop->key prop->key :key->prop key->prop)))
+  (is (seq-iter-match (bean #js {:a 1, :b 2} :prop->key prop->key :key->prop key->prop))))
+
+(deftest iter-test
+  (is (iterable? (bean #js {:a 1})))
+  (is (some? (iter (bean #js {:a 1}))))
+  (is (= '[:a] (sequence (map key) (bean #js {:a 1}))))
+  (is (= '[1] (sequence (map val) (bean #js {:a 1})))))
+
 (deftest transient-test
   (is (bean? (persistent! (transient (bean)))))
   (let [t (transient (bean))]

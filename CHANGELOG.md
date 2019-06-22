@@ -2,11 +2,14 @@
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
 ## [Unreleased]
+### Added
+- Support for `IIterable` ([#32](https://github.com/mfikes/cljs-bean/issues/32))
+
 ### Changed
 - Type hint return type of `object` ([#31](https://github.com/mfikes/cljs-bean/issues/31))
 - Cache `js-keys` ([#36](https://github.com/mfikes/cljs-bean/issues/36))
 
-## Fixed
+### Fixed
 - Count incorrect after `dissoc` non-key ([#38](https://github.com/mfikes/cljs-bean/issues/38))
 
 ## [1.0.0] - 2019-06-20
