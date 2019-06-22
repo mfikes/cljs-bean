@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file. This change
 ### Changed
 - Type hint return type of `object` ([#31](https://github.com/mfikes/cljs-bean/issues/31))
 
+## Fixed
+- Count incorrect after `dissoc` non-key ([#38](https://github.com/mfikes/cljs-bean/issues/38))
+
 ## [1.0.0] - 2019-06-20
 ### Changed
 - Inline `-lookup` calls ([#27](https://github.com/mfikes/cljs-bean/issues/27))

@@ -537,3 +537,14 @@
 (deftest object-hint-test
   (let [b (bean #js {:myInc (fn [x] (inc x))})]
     (is (= 2 (.myInc (object b) 1)))))
+
+(deftest issue-36-test
+  (let [b (bean #js {:a 1})]
+    (is (== 1 (count b)))
+    (is (== 1 (count (dissoc b :b))))
+    (is (== 0 (count (dissoc b :a)))))
+  (let [t (transient (bean #js {:a 1}))]
+    (is (== 1 (count t)))
+    (let [t' (dissoc! t :b)]
+      (is (== 1 (count t')))
+      (is (== 0 (count (dissoc! t' :a)))))))
