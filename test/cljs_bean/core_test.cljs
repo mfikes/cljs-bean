@@ -1,6 +1,6 @@
 (ns cljs-bean.core-test
   (:require
-   [clojure.test :refer [are deftest is]]
+   [clojure.test :refer [are deftest is testing]]
    [cljs-bean.core :refer [bean bean? object]]))
 
 (defn prop->key [prop]
@@ -78,6 +78,33 @@
   (is (.equiv (bean #js {"a/b" 1}) {:a/b 1}))
   (is (.equiv (bean #js {"a/b" 1} :keywordize-keys false) {"a/b" 1}))
   (is (.equiv (bean #js {"a/b" 1} :prop->key prop->key :key->prop key->prop) {"a/b" 1})))
+
+(deftest test-es6-interfaces
+  (testing "ES6 collection interfaces"
+    (is (.has (bean #js {:foo "bar"}) :foo))
+    (is (= (.get (bean #js {:foo "bar"}) :foo) "bar"))
+    (is (= (.get (bean #js {:foo "bar"}) :bar :default) :default))
+    (let [iter (.keys (bean #js {:foo "bar" :baz "woz"}))]
+      (testing "map key iteration"
+        (is (#{:foo :baz} (.-value (.next iter))))
+        (is (#{:foo :baz} (.-value (.next iter))))
+        (is (.-done (.next iter)))))
+    (let [either (.entries (bean #js {:foo "bar" :baz "woz"}))]
+      (testing "map entry iteration"
+        (let [entries #{(seq #js [:foo "bar"]) (seq #js [:baz "woz"])}]
+          (is (entries (seq (.-value (.next either)))))
+          (is (entries (seq (.-value (.next either))))))
+        (is (.-done (.next either)))))
+    (let [iter (.values (bean #js {:foo "bar" :baz "woz"}))]
+      (testing "map value iteration"
+        (is (#{"bar" "woz"} (.-value (.next iter))))
+        (is (#{"bar" "woz"} (.-value (.next iter))))
+        (is (.-done (.next iter)))))))
+
+(deftest dot-forEach-test
+  (.forEach (bean #js {:a 1}) (fn [v k]
+                                (is (= :a k))
+                                (is (== 1 v)))))
 
 (deftest keys-test
   (is (= [:a] (keys (bean #js {:a 1}))))
