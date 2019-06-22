@@ -268,7 +268,9 @@
 
   IIterable
   (-iterator [coll]
-    (BeanIterator. obj prop->key (js-keys obj) 0 (-count coll)))
+    (when (nil? __arr)
+      (set! __arr (js-keys obj)))
+    (BeanIterator. obj prop->key __arr 0 (-count coll)))
 
   ISeqable
   (-seq [_]
