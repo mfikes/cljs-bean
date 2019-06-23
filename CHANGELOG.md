@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file. This change
 
 ### Fixed
 - Count incorrect after `dissoc` non-key ([#38](https://github.com/mfikes/cljs-bean/issues/38))
+- Typo in docstring for bean: "controls" ([#40](https://github.com/mfikes/cljs-bean/issues/40))
 
 ## [1.0.0] - 2019-06-20
 ### Changed

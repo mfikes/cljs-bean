@@ -356,7 +356,7 @@
 
   By default, bean produces beans that keywordize the keys. Supply
   :keywordize-keys false to suppress this behavior. You can alternatively
-  supply :prop->key and :key->prop with functions that controls the mapping
+  supply :prop->key and :key->prop with functions that control the mapping
   between properties and keys. Calling (bean) produces an empty bean."
   ([]
    (Bean. nil #js {} keyword default-key->prop #js [] 0 nil))
