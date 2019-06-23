@@ -431,3 +431,12 @@
   "Takes a bean and returns a JavaScript object."
   [b]
   (.-obj b))
+
+;; TODO decide if these stay, given them docstrings
+
+(defn ->clj [x]
+  (->val x keyword default-key->prop))
+
+(defn ->js [x]
+  (when (bean? x)
+    (object x)))
