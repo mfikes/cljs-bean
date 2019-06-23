@@ -208,9 +208,6 @@
   (-pr-writer [coll writer opts]
     (pr-sequential-writer writer pr-writer "(" " " ")" opts coll)))
 
-(declare ^{:arglists '([x])} bean?)
-(declare ^{:arglists '([b])} object)
-
 (deftype ^:private Bean [meta obj prop->key key->prop ^:mutable __arr ^:mutable __cnt ^:mutable __hash]
   Object
   (toString [coll]
