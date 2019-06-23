@@ -2,35 +2,56 @@
   (:require
    [goog.object :as gobj]))
 
+(declare Bean)
+(declare bean?)
+(declare object)
+
 (def ^:private lookup-sentinel #js {})
 
-(defn- snapshot [x prop->key]
+(defn- ->val [x prop->key key->prop]
+  (cond
+    (number? x) x
+    (string? x) x
+    (boolean? x) x
+    (nil? x) x
+    (object? x) (Bean. nil x prop->key key->prop true nil nil nil)
+    (array? x) (mapv #(->val % prop->key key->prop) x)
+    :else x))
+
+(defn- snapshot [x prop->key key->prop recursive?]
   (let [result (volatile! (transient {}))]
-    (gobj/forEach x (fn [v k _] (vswap! result assoc! (prop->key k) v)))
+    (gobj/forEach x (fn [v k _] (vswap! result assoc! (prop->key k)
+                                  (cond-> v
+                                    recursive? (->val prop->key key->prop)))))
     (persistent! @result)))
 
-(defn- indexed-entry [obj prop->key arr i]
+(defn- indexed-entry [obj prop->key key->prop ^boolean recursive? arr i]
   (let [prop (aget arr i)]
-    (MapEntry. (prop->key prop) (unchecked-get obj prop) nil)))
+    (MapEntry. (prop->key prop)
+      (cond-> (unchecked-get obj prop)
+        recursive? (->val prop->key key->prop))
+      nil)))
 
 (defn- compatible-key? [k prop->key]
   (or
     (and (keyword? k) (identical? prop->key keyword))
     (and (string? k) (identical? prop->key identity))))
 
-(declare Bean)
-
 (deftype ^:private TransientBean [^:mutable ^boolean editable?
-                                  obj prop->key key->prop
+                                  obj prop->key key->prop ^boolean recursive?
                                   ^:mutable __cnt]
   ILookup
   (-lookup [_ k]
     (if editable?
-      (unchecked-get obj (key->prop k))
+      (cond-> (unchecked-get obj (key->prop k))
+        recursive? (->val prop->key key->prop))
       (throw (js/Error. "lookup after persistent!"))))
   (-lookup [_ k not-found]
     (if editable?
-      (gobj/get obj (key->prop k) not-found)
+      (let [ret (gobj/get obj (key->prop k) not-found)]
+        (cond-> ret
+          (and recursive? (not (identical? ret not-found)))
+          (->val prop->key key->prop)))
       (throw (js/Error. "lookup after persistent!"))))
 
   ICounted
@@ -61,18 +82,22 @@
     (if editable?
       (do
         (set! editable? false)
-        (Bean. nil obj prop->key key->prop nil __cnt nil))
+        (Bean. nil obj prop->key key->prop recursive? nil __cnt nil))
       (throw (js/Error. "persistent! called twice"))))
 
   ITransientAssociative
   (-assoc! [tcoll k v]
     (if editable?
-      (if (compatible-key? k prop->key)
+      (if (and (compatible-key? k prop->key)
+               (not (and recursive?
+                         (or (object? v)
+                             (array? v)))))
         (do
-          (unchecked-set obj (key->prop k) v)
+          (unchecked-set obj (key->prop k)
+            (cond-> v (and recursive? (bean? v)) object))
           (set! __cnt nil)
           tcoll)
-        (-assoc! (transient (snapshot obj prop->key)) k v))
+        (-assoc! (transient (snapshot obj prop->key key->prop recursive?)) k v))
       (throw (js/Error. "assoc! after persistent!"))))
 
   ITransientMap
@@ -87,23 +112,27 @@
   IFn
   (-invoke [_ k]
     (if editable?
-      (unchecked-get obj (key->prop k))
+      (cond-> (unchecked-get obj (key->prop k))
+        recursive? (->val prop->key key->prop))
       (throw (js/Error. "lookup after persistent!"))))
   (-invoke [_ k not-found]
     (if editable?
-      (gobj/get obj (key->prop k) not-found)
+      (let [ret (gobj/get obj (key->prop k) not-found)]
+        (cond-> ret
+          (and recursive? (not (identical? ret not-found)))
+          (->val prop->key key->prop)))
       (throw (js/Error. "lookup after persistent!")))))
 
-(deftype ^:private BeanIterator [obj prop->key arr ^:mutable i cnt]
+(deftype ^:private BeanIterator [obj prop->key key->prop ^boolean recursive? arr ^:mutable i cnt]
   Object
   (hasNext [_]
     (< i cnt))
   (next [_]
-    (let [ret (indexed-entry obj prop->key arr i)]
+    (let [ret (indexed-entry obj prop->key key->prop recursive? arr i)]
       (set! i (inc i))
       ret)))
 
-(deftype ^:private BeanSeq [obj prop->key arr i meta]
+(deftype ^:private BeanSeq [obj prop->key key->prop ^boolean recursive? arr i meta]
   Object
   (toString [coll]
     (pr-str* coll))
@@ -119,7 +148,7 @@
     (-lastIndexOf coll x start))
 
   ICloneable
-  (-clone [_] (BeanSeq. obj prop->key arr i meta))
+  (-clone [_] (BeanSeq. obj prop->key key->prop recursive? arr i meta))
 
   ISeqable
   (-seq [this]
@@ -132,18 +161,18 @@
   (-with-meta [coll new-meta]
     (if (identical? new-meta meta)
       coll
-      (BeanSeq. obj prop->key arr i new-meta)))
+      (BeanSeq. obj prop->key key->prop recursive? arr i new-meta)))
 
   ASeq
   ISeq
-  (-first [_] (indexed-entry obj prop->key arr i))
+  (-first [_] (indexed-entry obj prop->key key->prop recursive? arr i))
   (-rest [_] (if (< (inc i) (alength arr))
-               (BeanSeq. obj prop->key arr (inc i) nil)
+               (BeanSeq. obj prop->key key->prop recursive? arr (inc i) nil)
                ()))
 
   INext
   (-next [_] (if (< (inc i) (alength arr))
-               (BeanSeq. obj prop->key arr (inc i) nil)
+               (BeanSeq. obj prop->key key->prop recursive? arr (inc i) nil)
                nil))
 
   ICounted
@@ -154,12 +183,12 @@
   (-nth [_ n]
     (let [i (+ n i)]
       (if (and (<= 0 i) (< i (alength arr)))
-        (indexed-entry obj prop->key arr i)
+        (indexed-entry obj prop->key key->prop recursive? arr i)
         (throw (js/Error. "Index out of bounds")))))
   (-nth [_ n not-found]
     (let [i (+ n i)]
       (if (and (<= 0 i) (< i (alength arr)))
-        (indexed-entry obj prop->key arr i)
+        (indexed-entry obj prop->key key->prop recursive? arr i)
         not-found)))
 
   ISequential
@@ -184,7 +213,7 @@
   IReduce
   (-reduce [coll f]
     (let [cnt (-count coll)]
-      (loop [val (indexed-entry obj prop->key arr i), n (inc i)]
+      (loop [val (indexed-entry obj prop->key key->prop recursive? arr i), n (inc i)]
         (if (< n cnt)
           (let [nval (f val (-nth coll n))]
             (if (reduced? nval)
@@ -208,7 +237,8 @@
   (-pr-writer [coll writer opts]
     (pr-sequential-writer writer pr-writer "(" " " ")" opts coll)))
 
-(deftype ^:private Bean [meta obj prop->key key->prop ^:mutable __arr ^:mutable __cnt ^:mutable __hash]
+(deftype ^:private Bean [meta obj prop->key key->prop ^boolean recursive?
+                         ^:mutable __arr ^:mutable __cnt ^:mutable __hash]
   Object
   (toString [coll]
     (pr-str* coll))
@@ -230,13 +260,13 @@
       (f v k)))
 
   ICloneable
-  (-clone [_] (Bean. meta obj prop->key key->prop __arr __cnt __hash))
+  (-clone [_] (Bean. meta obj prop->key key->prop recursive? __arr __cnt __hash))
 
   IWithMeta
   (-with-meta [coll new-meta]
     (if (identical? new-meta meta)
       coll
-      (Bean. new-meta obj prop->key key->prop __arr __cnt __hash)))
+      (Bean. new-meta obj prop->key key->prop recursive? __arr __cnt __hash)))
 
   IMeta
   (-meta [_] meta)
@@ -254,7 +284,7 @@
               (throw (js/Error. "conj on a map takes map entries or seqables of map entries"))))))))
 
   IEmptyableCollection
-  (-empty [_] (Bean. meta #js {} prop->key key->prop #js []  0 nil))
+  (-empty [_] (Bean. meta #js {} prop->key key->prop recursive? #js []  0 nil))
 
   IEquiv
   (-equiv [coll other]
@@ -267,22 +297,26 @@
   (-iterator [coll]
     (when (nil? __arr)
       (set! __arr (js-keys obj)))
-    (BeanIterator. obj prop->key __arr 0 (-count coll)))
+    (BeanIterator. obj prop->key key->prop recursive? __arr 0 (-count coll)))
 
   ISeqable
   (-seq [_]
     (when (nil? __arr)
       (set! __arr (js-keys obj)))
     (when (pos? (alength __arr))
-      (BeanSeq. obj prop->key __arr 0 nil)))
+      (BeanSeq. obj prop->key key->prop recursive? __arr 0 nil)))
 
   IAssociative
   (-assoc [_ k v]
-    (if (compatible-key? k prop->key)
+    (if (and (compatible-key? k prop->key)
+             (not (and recursive?
+                       (or (object? v)
+                           (array? v)))))
       (Bean. meta
-        (doto (gobj/clone obj) (unchecked-set (key->prop k) v))
-        prop->key key->prop nil nil nil)
-      (-assoc (with-meta (snapshot obj prop->key) meta) k v)))
+        (doto (gobj/clone obj) (unchecked-set (key->prop k)
+                                 (cond-> v (and recursive? (bean? v)) object)))
+        prop->key key->prop recursive? nil nil nil)
+      (-assoc (with-meta (snapshot obj prop->key key->prop recursive?) meta) k v)))
 
   (-contains-key? [coll k]
     (contains? coll k))
@@ -291,12 +325,12 @@
   (-find [_ k]
     (let [v (gobj/get obj (key->prop k) lookup-sentinel)]
       (when-not (identical? v lookup-sentinel)
-        (MapEntry. k v nil))))
+        (MapEntry. k (cond-> v recursive? (->val prop->key key->prop)) nil))))
 
   IMap
   (-dissoc [_ k]
     (Bean. meta (doto (gobj/clone obj) (js-delete (key->prop k)))
-      prop->key key->prop nil nil nil))
+      prop->key key->prop recursive? nil nil nil))
 
   ICounted
   (-count [_]
@@ -309,9 +343,13 @@
 
   ILookup
   (-lookup [_ k]
-    (unchecked-get obj (key->prop k)))
+    (cond-> (unchecked-get obj (key->prop k))
+      recursive? (->val prop->key key->prop)))
   (-lookup [_ k not-found]
-    (gobj/get obj (key->prop k) not-found))
+    (let [ret (gobj/get obj (key->prop k) not-found)]
+      (cond-> ret
+        (and recursive? (not (identical? ret not-found)))
+        (->val prop->key key->prop))))
 
   IKVReduce
   (-kv-reduce [_ f init]
@@ -319,7 +357,8 @@
       (let [result (volatile! init)]
         (gobj/forEach obj
           (fn [v k _]
-            (let [r (vswap! result f (prop->key k) v)]
+            (let [r (vswap! result f (prop->key k)
+                      (cond-> v recursive? (->val prop->key key->prop)))]
               (when (reduced? r) (throw r)))))
         @result)
       (catch :default x
@@ -333,14 +372,18 @@
 
   IFn
   (-invoke [_ k]
-    (unchecked-get obj (key->prop k)))
+    (cond-> (unchecked-get obj (key->prop k))
+      recursive? (->val prop->key key->prop)))
 
   (-invoke [_ k not-found]
-    (gobj/get obj (key->prop k) not-found))
+    (let [ret (gobj/get obj (key->prop k) not-found)]
+      (cond-> ret
+        (and recursive? (not (identical? ret not-found)))
+        (->val prop->key key->prop))))
 
   IEditableCollection
   (-as-transient [_]
-    (TransientBean. true (gobj/clone obj) prop->key key->prop __cnt))
+    (TransientBean. true (gobj/clone obj) prop->key key->prop recursive? __cnt))
 
   IPrintWithWriter
   (-pr-writer [coll writer opts]
@@ -357,18 +400,27 @@
   By default, bean produces beans that keywordize the keys. Supply
   :keywordize-keys false to suppress this behavior. You can alternatively
   supply :prop->key and :key->prop with functions that control the mapping
-  between properties and keys. Calling (bean) produces an empty bean."
+  between properties and keys.
+
+  Supply :recursive true to create a bean which recursively converts
+  JavaScript object values to beans and JavaScript arrays into vectors.
+
+  Calling (bean) produces an empty bean."
   ([]
-   (Bean. nil #js {} keyword default-key->prop #js [] 0 nil))
+   (Bean. nil #js {} keyword default-key->prop false #js [] 0 nil))
   ([x]
-   (Bean. nil x keyword default-key->prop nil nil nil))
+   (Bean. nil x keyword default-key->prop false nil nil nil))
   ([x & opts]
-   (let [{:keys [keywordize-keys prop->key key->prop]} opts]
+   (let [{:keys [keywordize-keys prop->key key->prop recursive]} opts]
      (cond
-       (false? keywordize-keys) (Bean. nil x identity identity nil nil nil)
-       (true? keywordize-keys) (bean x)
-       (and (some? prop->key) (some? key->prop)) (Bean. nil x prop->key key->prop nil nil nil)
-       :else (throw (js/Error ":keywordize-keys or both :prop->key and :key->prop must be specified"))))))
+       (false? keywordize-keys)
+       (Bean. nil x identity identity (boolean recursive) nil nil nil)
+
+       (and (some? prop->key) (some? key->prop))
+       (Bean. nil x prop->key key->prop (boolean recursive) nil nil nil)
+
+       :else
+       (Bean. nil x keyword default-key->prop (boolean recursive) nil nil nil)))))
 
 (defn bean?
   "Returns true if x is a bean."
