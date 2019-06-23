@@ -65,6 +65,8 @@
 
 (deftest dot-toString-test
   (is (= "{:a 1}" (.toString (bean #js {:a 1}))))
+  (is (= "{:a #js {:b 3}}" (.toString (bean #js {:a #js {:b 3}}))))
+  (is (= "{:a {:b 3}}" (.toString (bean #js {:a #js {:b 3}} :recursive true))))
   (is (= "{\"a\" 1}" (.toString (bean #js {:a 1} :keywordize-keys false))))
   (is (= "{:a 1}" (.toString (bean #js {:a 1} :prop->key prop->key :key->prop key->prop))))
   (is (#{"#:a{:b 1}" "{:a/b 1}"} (.toString (bean #js {"a/b" 1}))))
@@ -73,6 +75,7 @@
 
 (deftest dot-equiv-test
   (is (.equiv (bean #js {:a 1}) {:a 1}))
+  (is (.equiv (bean #js {:a #js {:b 3}} :recursive true) {:a {:b 3}}))
   (is (.equiv (bean #js {:a 1} :keywordize-keys false) {"a" 1}))
   (is (.equiv (bean #js {:a 1} :prop->key prop->key :key->prop key->prop) {:a 1}))
   (is (.equiv (bean #js {"a/b" 1}) {:a/b 1}))
@@ -83,6 +86,7 @@
   (testing "ES6 collection interfaces"
     (is (.has (bean #js {:foo "bar"}) :foo))
     (is (= (.get (bean #js {:foo "bar"}) :foo) "bar"))
+    (is (= (.get (bean #js {:foo #js {:x 1}} :recursive true) :foo) {:x 1}))
     (is (= (.get (bean #js {:foo "bar"}) :bar :default) :default))
     (let [iter (.keys (bean #js {:foo "bar" :baz "woz"}))]
       (testing "map key iteration"
@@ -99,6 +103,11 @@
       (testing "map value iteration"
         (is (#{"bar" "woz"} (.-value (.next iter))))
         (is (#{"bar" "woz"} (.-value (.next iter))))
+        (is (.-done (.next iter)))))
+    (let [iter (.values (bean #js {:foo #js {:x 1} :baz #js {:y 2}} :recursive true))]
+      (testing "map value iteration"
+        (is (#{{:x 1} {:y 2}} (.-value (.next iter))))
+        (is (#{{:x 1} {:y 2}} (.-value (.next iter))))
         (is (.-done (.next iter)))))))
 
 (deftest dot-forEach-test
@@ -115,10 +124,18 @@
   (is (= ["a/b"] (keys (bean #js {"a/b" 1} :prop->key prop->key :key->prop key->prop)))))
 
 (deftest vals-test
-  (is (= [1] (vals (bean #js {:a 1})))))
+  (is (= [1] (vals (bean #js {:a 1}))))
+  (is (= [{:b 2}] (vals (bean #js {:a #js {:b 2}} :recursive true)))))
 
 (deftest clone-test
   (let [o (bean #js {:a 1})
+        _ (count o)
+        c (clone o)]
+    (is (= o c))
+    (is (not (identical? o c)))
+    (is (nil? (meta c)))
+    (is (== 1 (count c))))
+  (let [o (bean #js {:a #js {:b 2}} :recursive true)
         _ (count o)
         c (clone o)]
     (is (= o c))
@@ -152,6 +169,10 @@
     (count o)
     (is (= {:foo true} (meta (with-meta o {:foo true}))))
     (is (== 1 (count (with-meta o {:foo true})))))
+  (let [o (bean #js {:a #js {:2 2}} :recursive true)]
+    (count o)
+    (is (= {:foo true} (meta (with-meta o {:foo true}))))
+    (is (== 1 (count (with-meta o {:foo true})))))
   (let [o (bean #js {:a 1} :keywordize-keys false)]
     (count o)
     (is (= {:foo true} (meta (with-meta o {:foo true}))))
@@ -175,6 +196,13 @@
     (is (bean m))
     (is (= {:x 1 :y 2} m))
     (is (#{["x" "y"] ["y" "x"]} (vec (js-keys o)))))
+  (let [b (bean #js {:x #js {:z 4}} :recursive true)
+        m (conj b [:y (bean #js {:w 10})])
+        o (object m)]
+    (is (map? m))
+    (is (bean m))
+    (is (= {:x {:z 4} :y {:w 10}} m))
+    (is (#{["x" "y"] ["y" "x"]} (vec (js-keys o)))))
   (let [b (bean #js {:x 1})
         m (conj b ["y" 2])]
     (is (map? m))
@@ -186,6 +214,9 @@
   (is (zero? (count (empty (bean #js {:a 1})))))
   (is (empty? (empty (bean #js {:a 1}))))
   (is (bean? (empty (bean #js {:a 1}))))
+  (let [b (empty (bean #js {:a #js {:b 2}} :recursive true))]
+    (is (empty? b))
+    (is (= {:x {:y 10}} (assoc b :x (bean #js {:y 10})))))
   (let [m (with-meta (bean #js {:a 1}) {:foo true})]
     (= {:foo true} (meta (empty m))))
   (is (= {:a 1} (assoc (empty (bean #js {:b 2})) :a 1)))
@@ -194,6 +225,7 @@
 
 (deftest equiv-test
   (is (-equiv (bean #js {:a 1}) {:a 1}))
+  (is (-equiv (bean #js {:a #js {:b 2}} :recursive true) {:a {:b 2}}))
   (is (-equiv (bean #js {:a 1} :keywordize-keys false) {"a" 1}))
   (is (-equiv (bean #js {:a 1} :prop->key prop->key :key->prop key->prop) {:a 1}))
   (is (-equiv (bean #js {"a/b" 1}) {:a/b 1}))
@@ -202,6 +234,7 @@
 
 (deftest hash-test
   (is (== (hash {:a 1}) (hash (bean #js {:a 1}))))
+  (is (== (hash {:a {:b 2}}) (hash (bean #js {:a #js {:b 2}} :recursive true))))
   (is (== (hash {"a" 1}) (hash (bean #js {:a 1} :keywordize-keys false)))))
 
 (deftest seq-test
@@ -209,6 +242,7 @@
   (is (nil? (seq (bean #js {} :keywordize-keys false))))
   (is (= () (rest (seq (bean #js {})))))
   (is (= [[:a 1]] (seq (bean #js {:a 1}))))
+  (is (= [[:a {:b 2}]] (seq (bean #js {:a #js {:b 2}} :recursive true))))
   (is (map-entry? (first (seq (bean #js {:a 1})))))
   (is (nil? (next (seq (bean #js {:a 1})))))
   (is (= () (rest (seq (bean #js {:a 1})))))
@@ -222,6 +256,7 @@
   (is (counted? (bean)))
   (is (== 0 (count (bean #js {}))))
   (is (== 1 (count (bean #js {:a 1}))))
+  (is (== 1 (count (bean #js {:a #js {:b 2}} :recursive true))))
   (is (== 2 (count (bean #js {:a 1, :b 2}))))
   (is (== 1 (count (assoc (bean) :a 1))))
   (is (== 1 (count (assoc (bean #js {:a 1}) :a 1))))
@@ -237,7 +272,28 @@
     (is (= {:x 1 :y 2} m))
     (is (== 1 (unchecked-get o "x")))
     (is (== 2 (unchecked-get o "y"))))
+  (let [b (bean #js {:x 1} :recursive true)
+        m (assoc b :y 2)
+        o (object m)]
+    (is (map? m))
+    (is (bean? m))
+    (is (= {:x 1 :y 2} m))
+    (is (== 1 (unchecked-get o "x")))
+    (is (== 2 (unchecked-get o "y"))))
+  (let [b (bean #js {:x 1} :recursive true)
+        m (assoc b :y {:z 3})
+        o (object m)]
+    (is (map? m))
+    (is (bean? m))
+    (is (= {:x 1 :y {:z 3}} m))
+    (is (== 1 (unchecked-get o "x")))
+    (is (== {:z 3} (unchecked-get o "y"))))
   (let [b (bean #js {:x 1})
+        m (assoc b "y" 2)]
+    (is (map? m))
+    (is (not (bean? m)))
+    (is (= {:x 1 "y" 2} m)))
+  (let [b (bean #js {:x 1} :recursive true)
         m (assoc b "y" 2)]
     (is (map? m))
     (is (not (bean? m)))
@@ -266,6 +322,10 @@
   (let [b (bean color-black)]
     (is (map-entry? (find b :red)))
     (is (= [:red 0] (find b :red))))
+  (let [b (bean #js {:a #js {:b 2}} :recursive true)]
+    (is (map-entry? (find b :a)))
+    (is (= [:a {:b 2}] (find b :a)))
+    (is (bean? (val (find b :a)))))
   (let [b (bean #js {"my-ns/my-name" 17})]
     (is (= [:my-ns/my-name 17] (find b :my-ns/my-name))))
   (let [b (bean #js {"my-ns/my-name" 17} :keywordize-keys false)]
@@ -279,6 +339,13 @@
     (is (bean? m))
     (is (= ["a"] (vec (js-keys o))))
     (is (== 1 (unchecked-get o "a"))))
+  (let [b (bean #js {:a #js {:z 10}, :b #js {:c 3}} :recursive true)
+        m (dissoc b :b)
+        o (object m)]
+    (is (= {:a {:z 10}} m))
+    (is (bean? m))
+    (is (= ["a"] (vec (js-keys o))))
+    (is (object? (unchecked-get o "a"))))
   (let [b (bean #js {:a 1, :b 2})
         m (dissoc b "c")
         o (object m)]
@@ -306,22 +373,36 @@
 (deftest reduce-kv-test
   (is (= {1 :a, 2 :b, 3 :c}
         (reduce-kv #(assoc %1 %3 %2) {} (bean #js {:a 1 :b 2 :c 3}))))
+  (is (= {1 :a, {:z 10} :b, 3 :c}
+        (reduce-kv #(assoc %1 %3 %2) {} (bean #js {:a 1 :b #js {:z 10} :c 3} :recursive true))))
   (is (= 1 (reduce-kv (fn [r k v] (reduced v))
              nil
-             (bean #js {:a 1})))))
+             (bean #js {:a 1}))))
+  (is (= {:b 2} (reduce-kv (fn [r k v] (reduced v))
+             nil
+             (bean #js {:a #js {:b 2}} :recursive true)))))
 
 (deftest reduce-test
   (is (= [:a 1 :b 2 :c 3]
         (reduce into (bean #js {:a 1, :b 2, :c 3}))))
+  (is (= [:a 1 :b {:z 10} :c 3]
+        (reduce into (bean #js {:a 1, :b #js {:z 10}, :c 3} :recursive true))))
   (is (= {:a 2, :b 3}
         (reduce (fn [r [k v]]
                   (assoc r k (inc v)))
           {}
-          (bean #js {:a 1, :b 2})))))
+          (bean #js {:a 1, :b 2}))))
+  (is (= {:a {:z 1}, :b {:z 11}}
+        (reduce (fn [r [k v]]
+                  (assoc r k (update v :z inc)))
+          {}
+          (bean #js {:a #js {:z 0}, :b #js {:z 10}} :recursive true)))))
 
 (deftest ifn-test
   (let [b (bean color-black)]
     (is (= -16777216 (b :RGB))))
+  (let [b (bean #js {:a #js {:b 2}} :recursive true)]
+    (is (= {:b 2} (b :a))))
   (let [b (bean color-black :keywordize-keys false)]
     (is (= -16777216 (b "RGB"))))
   (let [b (bean color-black)]
@@ -329,7 +410,10 @@
 
 (deftest into-test
   (is (bean? (into (bean #js {}) {:a 1})))
+  (is (bean? (into (bean #js {} :recursive true) {:a 1})))
   (is (not (bean? (into (bean #js {}) [[:a 1] ["b" 2]]))))
+  (is (= {:a 1, :b 2} (into (bean #js {}) [[:a 1] [:b 2]])))
+  (is (= {:a 1, :b {:z 10}} (into (bean #js {} :recursive true) [[:a 1] [:b (bean #js {:z 10})]])))
   (is (= {:a 1, "b" 2} (into (bean #js {}) [[:a 1] ["b" 2]])))
   (is (not (bean? (into (bean #js {}) [["a" 1] [:b 2]]))))
   (is (= {"a" 1, :b 2} (into (bean #js {}) [["a" 1] [:b 2]])))
@@ -341,13 +425,18 @@
 
 (deftest object-test
   (is (object? (object (bean #js {}))))
+  (is (object? (object (bean #js {} :recursive true))))
   (let [o1 #js {:a 1}
+        o2 (object (bean o1))]
+    (is (identical? o2 o1)))
+  (let [o1 #js {:a #js {:b 2}}
         o2 (object (bean o1))]
     (is (identical? o2 o1)))
   (is (== 1 (unchecked-get (object (bean #js {:a 1})) "a"))))
 
 (deftest seq-dot-toString-test
   (is (= "([:a 1])" (.toString (seq (bean #js {:a 1})))))
+  (is (= "([:a {:b 2}])" (.toString (seq (bean #js {:a #js {:b 2}} :recursive true)))))
   (is (= "([\"a\" 1])" (.toString (seq (bean #js {:a 1} :keywordize-keys false)))))
   (is (= "([:a 1])" (.toString (seq (bean #js {:a 1} :prop->key prop->key :key->prop key->prop)))))
   (is (= "([:a/b 1])" (.toString (seq (bean #js {"a/b" 1})))))
@@ -356,6 +445,7 @@
 
 (deftest seq-dot-equiv-test
   (is (.equiv (seq (bean #js {:a 1})) [[:a 1]]))
+  (is (.equiv (seq (bean #js {:a #js {:b 2}} :recursive true)) [[:a {:b 2}]]))
   (is (.equiv (seq (bean #js {:a 1} :keywordize-keys false)) [["a" 1]]))
   (is (.equiv (seq (bean #js {:a 1} :prop->key prop->key :key->prop key->prop)) [[:a 1]]))
   (is (.equiv (seq (bean #js {"a/b" 1})) [[:a/b 1]]))
@@ -462,12 +552,16 @@
   (is (= [:x [:a 1]] (conj (seq (bean #js {:a 1})) :x))))
 
 (deftest seq-empty-test
-  (is (= [] (empty (seq (bean #js {:a 1}))))))
+  (is (= [] (empty (seq (bean #js {:a 1})))))
+  (is (= [] (empty (seq (bean #js {:a #js {:b 10}} :recursive true))))))
 
 (deftest seq-reduce-test
   (is (== 3 (reduce (fn [r e]
                       (+ (cond-> r (map-entry? r) val) (val e)))
               (seq (bean #js {:a 1, :b 2})))))
+  (is (== 3 (reduce (fn [r e]
+                      (+ (:z (cond-> r (map-entry? r) val)) (:z (val e))))
+              (seq (bean #js {:a #js {:z 1}, :b #js {:z 2}} :recursive true)))))
   (is (== :empty (reduce (fn []
                            :empty)
                    (seq (bean #js {})))))
@@ -489,6 +583,7 @@
 
 (deftest seq-hash-test
   (is (== (hash (seq {:a 1})) (hash (seq (bean #js {:a 1})))))
+  (is (== (hash (seq {:a {:b 2}})) (hash (seq (bean #js {:a #js {:b 2}} :recursive true)))))
   (is (== (hash (seq {"a" 1})) (hash (seq (bean #js {:a 1} :keywordize-keys false))))))
 
 (defn seq-iter-match
@@ -518,7 +613,9 @@
 (deftest coll-iter-seq-match
   (is (seq-iter-match (bean)))
   (is (seq-iter-match (bean #js {:a 1})))
+  (is (seq-iter-match (bean #js {:a #js {:b 2}} :recursive true)))
   (is (seq-iter-match (bean #js {:a 1, :b 2})))
+  (is (seq-iter-match (bean #js {:a 1, :b #js {:c 3}} :recursive true)))
   (is (seq-iter-match (bean #js {} :keywordize-keys false)))
   (is (seq-iter-match (bean #js {:a 1} :keywordize-keys false)))
   (is (seq-iter-match (bean #js {:a 1, :b 2} :keywordize-keys false)))
@@ -529,6 +626,7 @@
 (deftest iter-test
   (is (iterable? (bean #js {:a 1})))
   (is (some? (iter (bean #js {:a 1}))))
+  (is (some? (iter (bean #js {:a #js {:b 2}} :recursive true))))
   (is (= '[:a] (sequence (map key) (bean #js {:a 1}))))
   (is (= '[1] (sequence (map val) (bean #js {:a 1})))))
 
@@ -542,19 +640,34 @@
   (is (counted? (transient (bean))))
   (is (== 0 (count (transient (bean)))))
   (is (== 0 (count (transient (bean #js {})))))
+  (is (== 0 (count (transient (bean #js {} :recursive true)))))
   (is (== 1 (count (transient (bean #js {:a 1})))))
+  (is (== 1 (count (transient (bean #js {:a #js {:b 2}} :recursive true)))))
   (is (== 2 (count (transient (bean #js {:a 1, :b 2})))))
+  (is (== 2 (count (transient (bean #js {:a 1, :b #js {:c 3}} :recursive true)))))
   (let [b (bean #js {})]
+    (count b)
+    (is (== 0 (count (transient b)))))
+  (let [b (bean #js {} :recursive true)]
     (count b)
     (is (== 0 (count (transient b)))))
   (let [b (bean #js {:a 1})]
     (count b)
     (is (== 1 (count (transient b)))))
+  (let [b (bean #js {:a #js {:b 2}} :recursive true)]
+    (count b)
+    (is (== 1 (count (transient b)))))
   (let [b (bean #js {:a 1, :b 2})]
     (count b)
     (is (== 2 (count (transient b)))))
+  (let [b (bean #js {:a 1, :b #js {:c 3}} :recursive true)]
+    (count b)
+    (is (== 2 (count (transient b)))))
   (is (== 1 (count (assoc! (transient (bean)) :a 1))))
+  (is (== 1 (count (assoc! (transient (bean #js {} :recursive true)) :a 1))))
+  (is (== 1 (count (assoc! (transient (bean #js {} :recursive true)) :a (bean #js {:b 2})))))
   (is (== 1 (count (assoc! (transient (bean #js {:a 1})) :a 1))))
+  (is (== 1 (count (assoc! (transient (bean #js {:a 1} :recursive true)) :a (bean #js {:b 2})))))
   (let [b (bean #js {})]
     (count b)
     (is (== 1 (count (assoc! (transient b) :a 1)))))
@@ -567,6 +680,8 @@
 
 (deftest assoc!-test
   (is (= {:a 1} (persistent! (assoc! (transient (bean)) :a 1))))
+  (is (= {:a 1} (persistent! (assoc! (transient (bean #js {} :recursive true)) :a 1))))
+  (is (= {:a {:b 2}} (persistent! (assoc! (transient (bean #js {} :recursive true)) :a (bean #js {:b 2})))))
   (is (= {:a 1, :b 2} (persistent! (assoc! (transient (bean)) :a 1 :b 2))))
   (is (= {"a" 1} (persistent! (assoc! (transient (bean)) "a" 1))))
   (is (not (bean? (persistent! (assoc! (transient (bean)) "a" 1)))))
@@ -575,6 +690,8 @@
 
 (deftest conj!-test
   (is (= {:a 1} (persistent! (conj! (transient (bean)) [:a 1]))))
+  (is (= {:a 1} (persistent! (conj! (transient (bean #js {} :recursive true)) [:a 1]))))
+  (is (= {:a {:b 2}} (persistent! (conj! (transient (bean #js {} :recursive true)) [:a (bean #js {:b 2})]))))
   (is (= {:a 1} (persistent! (conj! (transient (bean)) {:a 1}))))
   (is (= {:a 1, :b 2} (persistent! (conj! (transient (bean)) {:a 1, :b 2}))))
   (is (= {"a" 1} (persistent! (conj! (transient (bean)) ["a" 1]))))
@@ -584,12 +701,15 @@
 
 (deftest dissoc!-test
   (is (= {:a 1} (persistent! (dissoc! (transient (bean #js {:a 1 :b 2})) :b))))
+  (is (= {:a 1} (persistent! (dissoc! (transient (bean #js {:a 1 :b #js {:x 10}} :recursive true)) :b))))
   (is (= {} (persistent! (dissoc! (transient (bean #js {:a 1 :b 2})) :a :b))))
   (let [t (doto (dissoc! (transient (bean #js {:a 1, :b 2})) :a) persistent!)]
     (is (thrown-with-msg? js/Error #"dissoc! after persistent!" (dissoc! t :b)))))
 
 (deftest transient-lookup-test
   (is (== 1 (:a (assoc! (transient (bean)) :a 1))))
+  (is (== 1 (:a (assoc! (transient (bean #js {} :recursive true)) :a 1))))
+  (is (== {:b 2} (:a (assoc! (transient (bean #js {} :recursive true)) :a (bean #js {:b 2})))))
   (let [t (assoc! (transient (bean)) :a 1)]
     (persistent! t)
     (is (thrown-with-msg? js/Error #"lookup after persistent!" (:a t))))
@@ -600,6 +720,7 @@
 
 (deftest transient-invoke-test
   (is (== 1 ((assoc! (transient (bean)) :a 1) :a)))
+  (is (== 1 ((assoc! (transient (bean #js {} :recursive true)) :a 1) :a)))
   (is (= :not-found ((assoc! (transient (bean)) :a 1) :b :not-found))))
 
 (deftest object-hint-test
