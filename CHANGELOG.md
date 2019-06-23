@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file. This change
 ### Changed
 - Type hint return type of `object` ([#31](https://github.com/mfikes/cljs-bean/issues/31))
 - Cache `js-keys` ([#36](https://github.com/mfikes/cljs-bean/issues/36))
+- Remove unnecessary declares for `bean?` and `object` ([#43](https://github.com/mfikes/cljs-bean/issues/43))
 
 ### Fixed
 - Count incorrect after `dissoc` non-key ([#38](https://github.com/mfikes/cljs-bean/issues/38))
