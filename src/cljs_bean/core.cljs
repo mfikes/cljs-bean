@@ -473,11 +473,10 @@
   IEmptyableCollection
   (-empty [_] ())
 
-  #_#_#_
   IReduce
   (-reduce [coll f]
-    #_(let [cnt (-count coll)]
-      (loop [val (indexed-entry obj prop->key key->prop recursive? arr i), n (inc i)]
+    (let [cnt (-count coll)]
+      (loop [val (-nth coll i), n (inc i)]
         (if (< n cnt)
           (let [nval (f val (-nth coll n))]
             (if (reduced? nval)
@@ -485,7 +484,7 @@
               (recur nval (inc n))))
           val))))
   (-reduce [coll f start]
-    #_(let [cnt (-count coll)]
+    (let [cnt (-count coll)]
       (loop [val start, n i]
         (if (< n cnt)
           (let [nval (f val (-nth coll n))]
