@@ -532,18 +532,13 @@
     (when (pos? (alength arr))
       (-nth coll (dec (alength arr)))))
   (-pop [coll]
-    #_(cond
-        (zero? cnt) (throw (js/Error. "Can't pop empty vector"))
-        (== 1 cnt) (-with-meta (.-EMPTY BeanVector) meta)
-        (< 1 (- cnt (tail-off coll)))
-        (BeanVector. meta (dec cnt) shift root (.slice tail 0 -1) nil)
-        :else (let [new-tail (unchecked-array-for coll (- cnt 2))
-                  nr (pop-tail coll shift root)
-                  new-root (if (nil? nr) (.-EMPTY-NODE BeanVector) nr)
-                  cnt-1 (dec cnt)]
-                (if (and (< 5 shift) (nil? (pv-aget new-root 1)))
-                  (BeanVector. meta cnt-1 (- shift 5) (pv-aget new-root 0) new-tail nil)
-                  (BeanVector. meta cnt-1 shift new-root new-tail nil)))))
+    (cond
+        (zero? (alength arr)) (throw (js/Error. "Can't pop empty vector"))
+        (== 1 (alength arr)) (-empty coll)
+        :else
+        (let [new-arr (aclone arr)]
+          (BeanVector. meta prop->key key->prop
+            (.slice new-arr 0 (dec (alength new-arr))) nil))))
 
   ICollection
   (-conj [_ o]
@@ -558,7 +553,7 @@
 
   IEmptyableCollection
   (-empty [coll]
-    (BeanVector. meta prop->key key->prop #js [] __hash))
+    (BeanVector. meta prop->key key->prop #js [] nil))
 
   ISequential
   IEquiv
