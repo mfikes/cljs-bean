@@ -395,6 +395,15 @@
   (-pr-writer [coll writer opts]
     (print-map coll pr-writer writer opts)))
 
+(deftype ^:private ArrayVectorIterator [prop->key key->prop arr ^:mutable i cnt]
+  Object
+  (hasNext [_]
+    (< i cnt))
+  (next [_]
+    (let [ret (->val (aget arr i) prop->key key->prop)]
+      (set! i (inc i))
+      ret)))
+
 (deftype ^:private ArrayVectorSeq [prop->key key->prop arr i meta]
   Object
   (toString [coll]
@@ -558,7 +567,7 @@
   ISequential
   IEquiv
   (-equiv [coll other]
-    (if false #_(instance? ArrayVector other)
+    (if (instance? ArrayVector other)
       (if (== (alength arr) (count other))
         (let [me-iter  (-iterator coll)
               you-iter (-iterator other)]
@@ -697,10 +706,9 @@
     (when (pos? (alength arr))
       (RSeq. coll (dec (alength arr)) nil)))
 
-  #_#_
   IIterable
-  (-iterator [this]
-    (ranged-iterator this 0 cnt))
+  (-iterator [_]
+    (ArrayVectorIterator. prop->key key->prop arr 0 (alength arr)))
 
   IPrintWithWriter
   (-pr-writer [coll writer opts]
