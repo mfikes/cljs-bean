@@ -558,8 +558,8 @@
   ISequential
   IEquiv
   (-equiv [coll other]
-    #_(if (instance? BeanVector other)
-      (if (== cnt (count other))
+    (if false #_(instance? BeanVector other)
+      (if (== (alength arr) (count other))
         (let [me-iter  (-iterator coll)
               you-iter (-iterator other)]
           (loop []
