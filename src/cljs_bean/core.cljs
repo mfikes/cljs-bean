@@ -664,13 +664,12 @@
             (recur (+ i len) init)))
         init)))
 
-  #_#_
+
   IKVReduce
   (-kv-reduce [v f init]
-    #_(loop [i 0 init init]
-      (if (< i cnt)
-        (let [arr  (unchecked-array-for v i)
-              len  (alength arr)
+    (loop [i 0 init init]
+      (if (< i (alength arr))
+        (let [len  (alength arr)
               init (loop [j 0 init init]
                      (if (< j len)
                        (let [init (f init (+ j i) (aget arr j))]
