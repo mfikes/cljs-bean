@@ -550,9 +550,10 @@
     (if (or (object? o) (array? o))
       (-conj (vec arr) o)
       (let [new-arr (aclone arr)]
-        (unchecked-set new-arr (alength new-arr) (cond-> o
-                                                   (bean? o) object
-                                                   (instance? BeanVector o) .-arr))
+        (unchecked-set new-arr (alength new-arr)
+          (cond-> o
+            (bean? o) object
+            (instance? BeanVector o) .-arr))
         (BeanVector. meta prop->key key->prop new-arr nil))))
 
   IEmptyableCollection
