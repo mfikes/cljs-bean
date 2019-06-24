@@ -672,14 +672,15 @@
   (-invoke [coll k not-found]
     (-nth coll k not-found))
 
+  #_#_
   IEditableCollection
   (-as-transient [coll]
     #_(TransientVector. cnt shift (tv-editable-root root) (tv-editable-tail tail)))
 
   IReversible
   (-rseq [coll]
-    #_(when (pos? cnt)
-      (RSeq. coll (dec cnt) nil)))
+    (when (pos? (alength arr))
+      (RSeq. coll (dec (alength arr)) nil)))
 
   #_#_
   IIterable
