@@ -547,9 +547,13 @@
 
   ICollection
   (-conj [_ o]
-    (let [new-arr (aclone arr)]
-      (unchecked-set new-arr (alength new-arr) o)
-      (BeanVector. meta prop->key key->prop new-arr nil)))
+    (if (or (object? o) (array? o))
+      (-conj (vec arr) o)
+      (let [new-arr (aclone arr)]
+        (unchecked-set new-arr (alength new-arr) (cond-> o
+                                                   (bean? o) object
+                                                   (instance? BeanVector o) .-arr))
+        (BeanVector. meta prop->key key->prop new-arr nil))))
 
   IEmptyableCollection
   (-empty [coll]
@@ -737,5 +741,6 @@
   (->val x keyword default-key->prop))
 
 (defn ->js [x]
-  (when (bean? x)
-    (object x)))
+  (cond
+    (bean? x) (object x)
+    (instance? BeanVector x) (.-arr x)))
