@@ -623,11 +623,13 @@
   (-assoc-n [coll n val]
     (cond
       (and (<= 0 n) (< n (alength arr)))
-      (let [new-arr (aclone arr)]
-        (aset new-arr n (cond-> val
-                          (bean? val) object
-                          (instance? BeanVector val) .-arr))
-        (BeanVector. meta prop->key key->prop new-arr nil))
+      (if (or (object? val) (array? val))
+        (-assoc-n (vec arr) n val)
+        (let [new-arr (aclone arr)]
+          (aset new-arr n (cond-> val
+                            (bean? val) object
+                            (instance? BeanVector val) .-arr))
+          (BeanVector. meta prop->key key->prop new-arr nil)))
       (== n (alength arr)) (-conj coll val)
       :else (throw (js/Error. (str "Index " n " out of bounds  [0," (alength arr) "]")))))
 
