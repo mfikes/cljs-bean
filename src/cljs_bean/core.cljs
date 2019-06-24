@@ -15,6 +15,7 @@
     (boolean? x) x
     (nil? x) x
     (object? x) (Bean. nil x prop->key key->prop true nil nil nil)
+    ;; TODO add an array wrapper that presents the vector interface
     (array? x) (mapv #(->val % prop->key key->prop) x)
     :else x))
 
