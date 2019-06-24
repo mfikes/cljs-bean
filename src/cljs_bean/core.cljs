@@ -692,9 +692,10 @@
     #_(when (pos? cnt)
       (RSeq. coll (dec cnt) nil)))
 
+  #_#_
   IIterable
   (-iterator [this]
-    #_(ranged-iterator this 0 cnt))
+    (ranged-iterator this 0 cnt))
 
   IPrintWithWriter
   (-pr-writer [coll writer opts]
