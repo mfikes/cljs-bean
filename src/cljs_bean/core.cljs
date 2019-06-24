@@ -3,6 +3,7 @@
    [goog.object :as gobj]))
 
 (declare Bean)
+(declare BeanVector)
 (declare bean?)
 (declare object)
 
@@ -15,8 +16,7 @@
     (boolean? x) x
     (nil? x) x
     (object? x) (Bean. nil x prop->key key->prop true nil nil nil)
-    ;; TODO add an array wrapper that presents the vector interface
-    (array? x) (mapv #(->val % prop->key key->prop) x)
+    (array? x) (BeanVector. nil prop->key key->prop x nil)
     :else x))
 
 (defn- snapshot [x prop->key key->prop recursive?]
@@ -95,7 +95,9 @@
                              (array? v)))))
         (do
           (unchecked-set obj (key->prop k)
-            (cond-> v (and recursive? (bean? v)) object))
+            (cond-> v
+              (and recursive? (bean? v)) object
+              (and recursive? (instance? BeanVector v)) .-arr))
           (set! __cnt nil)
           tcoll)
         (-assoc! (transient (snapshot obj prop->key key->prop recursive?)) k v))
@@ -315,7 +317,10 @@
                            (array? v)))))
       (Bean. meta
         (doto (gobj/clone obj) (unchecked-set (key->prop k)
-                                 (cond-> v (and recursive? (bean? v)) object)))
+                                 ;; TODO short circuit this
+                                 (cond-> v
+                                   (and recursive? (bean? v)) object
+                                   (and recursive? (instance? BeanVector v)) .-arr)))
         prop->key key->prop recursive? nil nil nil)
       (-assoc (with-meta (snapshot obj prop->key key->prop recursive?) meta) k v)))
 
@@ -389,6 +394,311 @@
   IPrintWithWriter
   (-pr-writer [coll writer opts]
     (print-map coll pr-writer writer opts)))
+
+(deftype ^:private BeanVectorSeq [prop->key key->prop arr i meta]
+  Object
+  (toString [coll]
+    (pr-str* coll))
+  (equiv [this other]
+    (-equiv this other))
+  (indexOf [coll x]
+    (-indexOf coll x 0))
+  (indexOf [coll x start]
+    (-indexOf coll x start))
+  (lastIndexOf [coll x]
+    (-lastIndexOf coll x (count coll)))
+  (lastIndexOf [coll x start]
+    (-lastIndexOf coll x start))
+
+  ICloneable
+  (-clone [_] (BeanVectorSeq. prop->key key->prop arr i meta))
+
+  ISeqable
+  (-seq [this]
+    (when (< i (alength arr))
+      this))
+
+  IMeta
+  (-meta [_] meta)
+  IWithMeta
+  (-with-meta [coll new-meta]
+    (if (identical? new-meta meta)
+      coll
+      (BeanVectorSeq. prop->key key->prop arr i new-meta)))
+
+  ASeq
+  ISeq
+  (-first [_] (->val (aget arr i) prop->key key->prop))
+  (-rest [_] (if (< (inc i) (alength arr))
+               (BeanVectorSeq. prop->key key->prop arr (inc i) nil)
+               ()))
+
+  INext
+  (-next [_] (if (< (inc i) (alength arr))
+               (BeanVectorSeq. prop->key key->prop arr (inc i) nil)
+               nil))
+
+  ICounted
+  (-count [_]
+    (max 0 (- (alength arr) i)))
+
+  IIndexed
+  (-nth [_ n]
+    (let [i (+ n i)]
+      (if (and (<= 0 i) (< i (alength arr)))
+        (aget arr i)
+        (throw (js/Error. "Index out of bounds")))))
+  (-nth [_ n not-found]
+    (let [i (+ n i)]
+      (if (and (<= 0 i) (< i (alength arr)))
+        (aget arr i)
+        not-found)))
+
+  ISequential
+  IEquiv
+  (-equiv [coll other]
+    #_(boolean
+      (when (sequential? other)
+        (if (and (counted? other) (not (== (-count coll) (-count other))))
+          false
+          (loop [xs (-seq coll) ys (seq other)]
+            (cond (nil? xs) (nil? ys)
+                  (nil? ys) false
+                  (= (first xs) (first ys)) (recur (next xs) (next ys))
+                  :else false))))))
+
+  ICollection
+  (-conj [coll o] (cons o coll))
+
+  IEmptyableCollection
+  (-empty [_] ())
+
+  IReduce
+  (-reduce [coll f]
+    #_(let [cnt (-count coll)]
+      (loop [val (indexed-entry obj prop->key key->prop recursive? arr i), n (inc i)]
+        (if (< n cnt)
+          (let [nval (f val (-nth coll n))]
+            (if (reduced? nval)
+              @nval
+              (recur nval (inc n))))
+          val))))
+  (-reduce [coll f start]
+    #_(let [cnt (-count coll)]
+      (loop [val start, n i]
+        (if (< n cnt)
+          (let [nval (f val (-nth coll n))]
+            (if (reduced? nval)
+              @nval
+              (recur nval (inc n))))
+          val))))
+
+  IHash
+  (-hash [coll] (hash-ordered-coll coll))
+
+  IPrintWithWriter
+  (-pr-writer [coll writer opts]
+    (pr-sequential-writer writer pr-writer "(" " " ")" opts coll)))
+
+(deftype ^:private BeanVector [meta prop->key key->prop arr ^:mutable __hash]
+  Object
+  (toString [coll]
+    (pr-str* coll))
+  (equiv [this other]
+    (-equiv this other))
+  (indexOf [coll x]
+    (-indexOf coll x 0))
+  (indexOf [coll x start]
+    (-indexOf coll x start))
+  (lastIndexOf [coll x]
+    (-lastIndexOf coll x (alength coll)))
+  (lastIndexOf [coll x start]
+    (-lastIndexOf coll x start))
+
+  ICloneable
+  (-clone [_] (BeanVector. meta prop->key key->prop arr __hash))
+
+  IWithMeta
+  (-with-meta [coll new-meta]
+    (if (identical? new-meta meta)
+      coll
+      (BeanVector. new-meta prop->key key->prop arr __hash)))
+
+  IMeta
+  (-meta [coll] meta)
+
+  IStack
+  (-peek [coll]
+    (when (pos? (alength arr))
+      (-nth coll (dec (alength arr)))))
+  (-pop [coll]
+    #_(cond
+        (zero? cnt) (throw (js/Error. "Can't pop empty vector"))
+        (== 1 cnt) (-with-meta (.-EMPTY BeanVector) meta)
+        (< 1 (- cnt (tail-off coll)))
+        (BeanVector. meta (dec cnt) shift root (.slice tail 0 -1) nil)
+        :else (let [new-tail (unchecked-array-for coll (- cnt 2))
+                  nr (pop-tail coll shift root)
+                  new-root (if (nil? nr) (.-EMPTY-NODE BeanVector) nr)
+                  cnt-1 (dec cnt)]
+                (if (and (< 5 shift) (nil? (pv-aget new-root 1)))
+                  (BeanVector. meta cnt-1 (- shift 5) (pv-aget new-root 0) new-tail nil)
+                  (BeanVector. meta cnt-1 shift new-root new-tail nil)))))
+
+  ICollection
+  (-conj [coll o]
+    #_(if (< (- cnt (tail-off coll)) 32)
+        (let [len (alength tail)
+            new-tail (make-array (inc len))]
+          (dotimes [i len]
+          (aset new-tail i (aget tail i)))
+          (aset new-tail len o)
+          (BeanVector. meta (inc cnt) shift root new-tail nil))
+        (let [root-overflow? (> (bit-shift-right-zero-fill cnt 5) (bit-shift-left 1 shift))
+            new-shift (if root-overflow? (+ shift 5) shift)
+            new-root (if root-overflow?
+                       (let [n-r (pv-fresh-node nil)]
+                         (pv-aset n-r 0 root)
+                         (pv-aset n-r 1 (new-path nil shift (VectorNode. nil tail)))
+                         n-r)
+                       (push-tail coll shift root (VectorNode. nil tail)))]
+          (BeanVector. meta (inc cnt) new-shift new-root (array o) nil))))
+
+  IEmptyableCollection
+  (-empty [coll]
+    (BeanVector. meta prop->key key->prop #js [] __hash))
+
+  ISequential
+  IEquiv
+  (-equiv [coll other]
+    #_(if (instance? BeanVector other)
+      (if (== cnt (count other))
+        (let [me-iter  (-iterator coll)
+              you-iter (-iterator other)]
+          (loop []
+            (if ^boolean (.hasNext me-iter)
+              (let [x (.next me-iter)
+                    y (.next you-iter)]
+                (if (= x y)
+                  (recur)
+                  false))
+              true)))
+        false)
+      (equiv-sequential coll other)))
+
+  IHash
+  (-hash [coll] (caching-hash coll hash-ordered-coll __hash))
+
+  ISeqable
+  (-seq [coll]
+    (when (pos? (alength arr))
+      (BeanVectorSeq. prop->key key->prop arr 0 nil)))
+
+  ICounted
+  (-count [coll] (alength arr))
+
+  IIndexed
+  (-nth [coll n]
+    (->val (aget arr n) prop->key key->prop))
+  (-nth [coll n not-found]
+    (if (and (<= 0 n) (< n (alength arr)))
+      (->val (aget arr n) prop->key key->prop)
+      not-found))
+
+  ILookup
+  (-lookup [coll k] (-lookup coll k nil))
+  (-lookup [coll k not-found] (if (number? k)
+                                (-nth coll k not-found)
+                                not-found))
+
+  IAssociative
+  (-assoc [coll k v]
+    (if (number? k)
+      (-assoc-n coll k v)
+      (throw (js/Error. "Vector's key for assoc must be a number."))))
+  (-contains-key? [coll k]
+    (if (integer? k)
+      (and (<= 0 k) (< k (alength arr)))
+      false))
+
+  IFind
+  (-find [coll n]
+    (when (and (<= 0 n) (< n (alength arr)))
+      (MapEntry. n (->val (aget arr n) prop->key key->prop) nil)))
+
+  APersistentVector
+  IVector
+  (-assoc-n [coll n val]
+    (cond
+      (and (<= 0 n) (< n (alength arr)))
+      (let [new-arr (aclone arr)]
+        (aset new-arr n (cond-> val
+                          (bean? val) object
+                          (instance? BeanVector val) .-arr))
+        (BeanVector. meta prop->key key->prop new-arr nil))
+      (== n (alength arr)) (-conj coll val)
+      :else (throw (js/Error. (str "Index " n " out of bounds  [0," (alength arr) "]")))))
+
+  IReduce
+  (-reduce [v f]
+    #_(pv-reduce v f 0 cnt))
+  (-reduce [v f init]
+    #_(loop [i 0 init init]
+      (if (< i cnt)
+        (let [arr  (unchecked-array-for v i)
+              len  (alength arr)
+              init (loop [j 0 init init]
+                     (if (< j len)
+                       (let [init (f init (aget arr j))]
+                         (if (reduced? init)
+                           init
+                           (recur (inc j) init)))
+                       init))]
+          (if (reduced? init)
+            @init
+            (recur (+ i len) init)))
+        init)))
+
+  IKVReduce
+  (-kv-reduce [v f init]
+    #_(loop [i 0 init init]
+      (if (< i cnt)
+        (let [arr  (unchecked-array-for v i)
+              len  (alength arr)
+              init (loop [j 0 init init]
+                     (if (< j len)
+                       (let [init (f init (+ j i) (aget arr j))]
+                         (if (reduced? init)
+                           init
+                           (recur (inc j) init)))
+                       init))]
+          (if (reduced? init)
+            @init
+            (recur (+ i len) init)))
+        init)))
+
+  IFn
+  (-invoke [coll k]
+    (-nth coll k))
+  (-invoke [coll k not-found]
+    (-nth coll k not-found))
+
+  IEditableCollection
+  (-as-transient [coll]
+    #_(TransientVector. cnt shift (tv-editable-root root) (tv-editable-tail tail)))
+
+  IReversible
+  (-rseq [coll]
+    #_(when (pos? cnt)
+      (RSeq. coll (dec cnt) nil)))
+
+  IIterable
+  (-iterator [this]
+    #_(ranged-iterator this 0 cnt))
+
+  IPrintWithWriter
+  (-pr-writer [coll writer opts]
+    (pr-sequential-writer writer pr-writer "[" " " "]" opts coll)))
 
 (defn- default-key->prop [x]
   (when (keyword? x)
