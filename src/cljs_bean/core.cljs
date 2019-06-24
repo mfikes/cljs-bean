@@ -546,23 +546,10 @@
                   (BeanVector. meta cnt-1 shift new-root new-tail nil)))))
 
   ICollection
-  (-conj [coll o]
-    #_(if (< (- cnt (tail-off coll)) 32)
-        (let [len (alength tail)
-            new-tail (make-array (inc len))]
-          (dotimes [i len]
-          (aset new-tail i (aget tail i)))
-          (aset new-tail len o)
-          (BeanVector. meta (inc cnt) shift root new-tail nil))
-        (let [root-overflow? (> (bit-shift-right-zero-fill cnt 5) (bit-shift-left 1 shift))
-            new-shift (if root-overflow? (+ shift 5) shift)
-            new-root (if root-overflow?
-                       (let [n-r (pv-fresh-node nil)]
-                         (pv-aset n-r 0 root)
-                         (pv-aset n-r 1 (new-path nil shift (VectorNode. nil tail)))
-                         n-r)
-                       (push-tail coll shift root (VectorNode. nil tail)))]
-          (BeanVector. meta (inc cnt) new-shift new-root (array o) nil))))
+  (-conj [_ o]
+    (let [new-arr (aclone arr)]
+      (unchecked-set new-arr (alength new-arr) o)
+      (BeanVector. meta prop->key key->prop new-arr nil)))
 
   IEmptyableCollection
   (-empty [coll]
