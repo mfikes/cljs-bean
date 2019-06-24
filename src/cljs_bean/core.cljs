@@ -672,7 +672,7 @@
         (let [len  (alength arr)
               init (loop [j 0 init init]
                      (if (< j len)
-                       (let [init (f init (+ j i) (aget arr j))]
+                       (let [init (f init (+ j i) (->val (aget arr j) prop->key key->prop))]
                          (if (reduced? init)
                            init
                            (recur (inc j) init)))
