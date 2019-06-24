@@ -457,7 +457,7 @@
   ISequential
   IEquiv
   (-equiv [coll other]
-    #_(boolean
+    (boolean
       (when (sequential? other)
         (if (and (counted? other) (not (== (-count coll) (-count other))))
           false
@@ -473,6 +473,7 @@
   IEmptyableCollection
   (-empty [_] ())
 
+  #_#_#_
   IReduce
   (-reduce [coll f]
     #_(let [cnt (-count coll)]
@@ -628,6 +629,7 @@
       (== n (alength arr)) (-conj coll val)
       :else (throw (js/Error. (str "Index " n " out of bounds  [0," (alength arr) "]")))))
 
+  #_#_#_
   IReduce
   (-reduce [v f]
     #_(pv-reduce v f 0 cnt))
@@ -648,6 +650,7 @@
             (recur (+ i len) init)))
         init)))
 
+  #_#_
   IKVReduce
   (-kv-reduce [v f init]
     #_(loop [i 0 init init]
