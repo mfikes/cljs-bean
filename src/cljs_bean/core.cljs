@@ -3,7 +3,7 @@
    [goog.object :as gobj]))
 
 (declare Bean)
-(declare BeanVector)
+(declare ArrayVector)
 (declare bean?)
 (declare object)
 
@@ -16,7 +16,7 @@
     (boolean? x) x
     (nil? x) x
     (object? x) (Bean. nil x prop->key key->prop true nil nil nil)
-    (array? x) (BeanVector. nil prop->key key->prop x nil)
+    (array? x) (ArrayVector. nil prop->key key->prop x nil)
     :else x))
 
 (defn- snapshot [x prop->key key->prop recursive?]
@@ -97,7 +97,7 @@
           (unchecked-set obj (key->prop k)
             (cond-> v
               (and recursive? (bean? v)) object
-              (and recursive? (instance? BeanVector v)) .-arr))
+              (and recursive? (instance? ArrayVector v)) .-arr))
           (set! __cnt nil)
           tcoll)
         (-assoc! (transient (snapshot obj prop->key key->prop recursive?)) k v))
@@ -320,7 +320,7 @@
                                  ;; TODO short circuit this
                                  (cond-> v
                                    (and recursive? (bean? v)) object
-                                   (and recursive? (instance? BeanVector v)) .-arr)))
+                                   (and recursive? (instance? ArrayVector v)) .-arr)))
         prop->key key->prop recursive? nil nil nil)
       (-assoc (with-meta (snapshot obj prop->key key->prop recursive?) meta) k v)))
 
@@ -395,7 +395,7 @@
   (-pr-writer [coll writer opts]
     (print-map coll pr-writer writer opts)))
 
-(deftype ^:private BeanVectorSeq [prop->key key->prop arr i meta]
+(deftype ^:private ArrayVectorSeq [prop->key key->prop arr i meta]
   Object
   (toString [coll]
     (pr-str* coll))
@@ -411,7 +411,7 @@
     (-lastIndexOf coll x start))
 
   ICloneable
-  (-clone [_] (BeanVectorSeq. prop->key key->prop arr i meta))
+  (-clone [_] (ArrayVectorSeq. prop->key key->prop arr i meta))
 
   ISeqable
   (-seq [this]
@@ -424,18 +424,18 @@
   (-with-meta [coll new-meta]
     (if (identical? new-meta meta)
       coll
-      (BeanVectorSeq. prop->key key->prop arr i new-meta)))
+      (ArrayVectorSeq. prop->key key->prop arr i new-meta)))
 
   ASeq
   ISeq
   (-first [_] (->val (aget arr i) prop->key key->prop))
   (-rest [_] (if (< (inc i) (alength arr))
-               (BeanVectorSeq. prop->key key->prop arr (inc i) nil)
+               (ArrayVectorSeq. prop->key key->prop arr (inc i) nil)
                ()))
 
   INext
   (-next [_] (if (< (inc i) (alength arr))
-               (BeanVectorSeq. prop->key key->prop arr (inc i) nil)
+               (ArrayVectorSeq. prop->key key->prop arr (inc i) nil)
                nil))
 
   ICounted
@@ -501,7 +501,7 @@
   (-pr-writer [coll writer opts]
     (pr-sequential-writer writer pr-writer "(" " " ")" opts coll)))
 
-(deftype ^:private BeanVector [meta prop->key key->prop arr ^:mutable __hash]
+(deftype ^:private ArrayVector [meta prop->key key->prop arr ^:mutable __hash]
   Object
   (toString [coll]
     (pr-str* coll))
@@ -517,13 +517,13 @@
     (-lastIndexOf coll x start))
 
   ICloneable
-  (-clone [_] (BeanVector. meta prop->key key->prop arr __hash))
+  (-clone [_] (ArrayVector. meta prop->key key->prop arr __hash))
 
   IWithMeta
   (-with-meta [coll new-meta]
     (if (identical? new-meta meta)
       coll
-      (BeanVector. new-meta prop->key key->prop arr __hash)))
+      (ArrayVector. new-meta prop->key key->prop arr __hash)))
 
   IMeta
   (-meta [coll] meta)
@@ -538,7 +538,7 @@
         (== 1 (alength arr)) (-empty coll)
         :else
         (let [new-arr (aclone arr)]
-          (BeanVector. meta prop->key key->prop
+          (ArrayVector. meta prop->key key->prop
             (.slice new-arr 0 (dec (alength new-arr))) nil))))
 
   ICollection
@@ -549,17 +549,17 @@
         (unchecked-set new-arr (alength new-arr)
           (cond-> o
             (bean? o) object
-            (instance? BeanVector o) .-arr))
-        (BeanVector. meta prop->key key->prop new-arr nil))))
+            (instance? ArrayVector o) .-arr))
+        (ArrayVector. meta prop->key key->prop new-arr nil))))
 
   IEmptyableCollection
   (-empty [coll]
-    (BeanVector. meta prop->key key->prop #js [] nil))
+    (ArrayVector. meta prop->key key->prop #js [] nil))
 
   ISequential
   IEquiv
   (-equiv [coll other]
-    (if false #_(instance? BeanVector other)
+    (if false #_(instance? ArrayVector other)
       (if (== (alength arr) (count other))
         (let [me-iter  (-iterator coll)
               you-iter (-iterator other)]
@@ -580,7 +580,7 @@
   ISeqable
   (-seq [coll]
     (when (pos? (alength arr))
-      (BeanVectorSeq. prop->key key->prop arr 0 nil)))
+      (ArrayVectorSeq. prop->key key->prop arr 0 nil)))
 
   ICounted
   (-count [coll] (alength arr))
@@ -624,8 +624,8 @@
         (let [new-arr (aclone arr)]
           (aset new-arr n (cond-> val
                             (bean? val) object
-                            (instance? BeanVector val) .-arr))
-          (BeanVector. meta prop->key key->prop new-arr nil)))
+                            (instance? ArrayVector val) .-arr))
+          (ArrayVector. meta prop->key key->prop new-arr nil)))
       (== n (alength arr)) (-conj coll val)
       :else (throw (js/Error. (str "Index " n " out of bounds  [0," (alength arr) "]")))))
 
@@ -758,4 +758,4 @@
 (defn ->js [x]
   (cond
     (bean? x) (object x)
-    (instance? BeanVector x) (.-arr x)))
+    (instance? ArrayVector x) (.-arr x)))
