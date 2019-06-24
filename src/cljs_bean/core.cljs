@@ -629,18 +629,32 @@
       (== n (alength arr)) (-conj coll val)
       :else (throw (js/Error. (str "Index " n " out of bounds  [0," (alength arr) "]")))))
 
-  #_#_#_
+
   IReduce
   (-reduce [v f]
-    #_(pv-reduce v f 0 cnt))
-  (-reduce [v f init]
-    #_(loop [i 0 init init]
-      (if (< i cnt)
-        (let [arr  (unchecked-array-for v i)
-              len  (alength arr)
+    (if (zero? (alength arr))
+      (f)
+      (loop [i 1 init (-nth v 0)]
+        (if (< i (alength arr))
+          (let [len  (alength arr)
+                init (loop [j 1 init init]
+                       (if (< j len)
+                         (let [init (f init (->val (aget arr j) prop->key key->prop))]
+                           (if (reduced? init)
+                             init
+                             (recur (inc j) init)))
+                         init))]
+            (if (reduced? init)
+              @init
+              (recur (+ i len) init)))
+          init))))
+  (-reduce [_ f init]
+    (loop [i 0 init init]
+      (if (< i (alength arr))
+        (let [len  (alength arr)
               init (loop [j 0 init init]
                      (if (< j len)
-                       (let [init (f init (aget arr j))]
+                       (let [init (f init (->val (aget arr j) prop->key key->prop))]
                          (if (reduced? init)
                            init
                            (recur (inc j) init)))
