@@ -844,12 +844,23 @@
   [b]
   (.-obj b))
 
-;; TODO decide if these stay, given them docstrings
+(defn ->clj
+  "Recursively converts JavaScript values to ClojureScript.
 
-(defn ->clj [x]
+  JavaScript objects are converted to beans with keywords for keys.
+
+  JavaScript arrays are converted to read-only implementations of the vector
+  abstraction, backed by the supplied array."
+  [x]
   (->val x keyword default-key->prop))
 
-(defn ->js [x]
+(defn ->js
+  "Recursively converts ClojureScript values to JavaScript.
+
+  Where possible, directly returns the backing objects and arrays for values
+  produced using ->clj."
+  [x]
   (cond
-    (bean? x) (object x)
-    (instance? ArrayVector x) (.-arr x)))
+    (recursive-bean? x) (object x)
+    (instance? ArrayVector x) (.-arr x)
+    :else (clj->js x :keyword-fn default-key->prop)))

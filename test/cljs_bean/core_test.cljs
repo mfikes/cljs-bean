@@ -1,7 +1,10 @@
 (ns cljs-bean.core-test
   (:require
    [clojure.test :refer [are deftest is testing]]
-   [cljs-bean.core :refer [bean bean? object]]))
+   [cljs-bean.core :refer [bean bean? object ->clj ->js]]))
+
+(defn recursive-bean? [x]
+  (and (bean? x) (.-recursive? x)))
 
 (defn prop->key [prop]
   (cond-> prop
@@ -726,6 +729,15 @@
 (deftest object-hint-test
   (let [b (bean #js {:myInc (fn [x] (inc x))})]
     (is (= 2 (.myInc (object b) 1)))))
+
+(deftest ->clj-test
+  (is (nil? (->clj nil)))
+  (is (true? (->clj true)))
+  (is (== 1 (->clj 1)))
+  (is (= "a" (->clj "a")))
+  (is (fn? (->clj (fn []))))
+  (is (vector? (->clj #js [1])))
+  (is (recursive-bean? (->clj #js {:a 1}))))
 
 (deftest issue-38-test
   (let [b (bean #js {:a 1})]
