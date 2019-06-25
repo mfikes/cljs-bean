@@ -395,6 +395,92 @@
   (-pr-writer [coll writer opts]
     (print-map coll pr-writer writer opts)))
 
+(deftype ^:priviate TransientArrayVector [^:mutable ^boolean editable?
+                                          ^:mutable arr prop->key key->prop]
+  ITransientCollection
+  (-conj! [tcoll o]
+    (if editable?
+      (if (or (object? o) (array? o))
+        (-conj! (transient (vec arr)) o)
+        (do
+          (unchecked-set arr (alength arr)
+            (cond-> o
+              (bean? o) object
+              (instance? ArrayVector o) .-arr))
+          tcoll))
+      (throw (js/Error. "conj! after persistent!"))))
+
+  (-persistent! [_]
+    (if editable?
+      (do
+        (set! editable? false)
+        (ArrayVector. nil prop->key key->prop arr nil))
+      (throw (js/Error. "persistent! called twice"))))
+
+  ITransientAssociative
+  (-assoc! [tcoll key val]
+    (if (number? key)
+      (-assoc-n! tcoll key val)
+      (throw (js/Error. "TransientVector's key for assoc! must be a number."))))
+
+  ITransientVector
+  (-assoc-n! [tcoll n val]
+    (if editable?
+      (if (or (object? val) (array? val))
+        (-assoc-n! (transient (vec arr)) n val)
+        (cond
+          (and (<= 0 n) (< n (alength arr)))
+          (do (aset arr n (cond-> val
+                            (bean? val) object
+                            (instance? ArrayVector val) .-arr))
+              tcoll)
+          (== n (alength arr)) (-conj! tcoll val)
+          :else
+          (throw
+            (js/Error.
+              (str "Index " n " out of bounds for TransientArrayVector of length" (alength arr))))))
+      (throw (js/Error. "assoc! after persistent!"))))
+
+  (-pop! [tcoll]
+    (if editable?
+      (if (zero? (alength arr))
+        (throw (js/Error. "Can't pop empty vector"))
+        (do
+          (set! arr (.slice arr 0 (dec (alength arr))))
+          tcoll))
+      (throw (js/Error. "pop! after persistent!"))))
+
+  ICounted
+  (-count [_]
+    (if editable?
+      (alength arr)
+      (throw (js/Error. "count after persistent!"))))
+
+  IIndexed
+  (-nth [_ n]
+    (if editable?
+      (->val (aget arr n) prop->key key->prop)
+      (throw (js/Error. "nth after persistent!"))))
+
+  (-nth [coll n not-found]
+    (if (and (<= 0 n) (< n (alength arr)))
+      (-nth coll n)
+      not-found))
+
+  ILookup
+  (-lookup [coll k] (-lookup coll k nil))
+
+  (-lookup [coll k not-found] (if (number? k)
+                                (-nth coll k not-found)
+                                not-found))
+
+  IFn
+  (-invoke [coll k]
+    (-lookup coll k))
+
+  (-invoke [coll k not-found]
+    (-lookup coll k not-found)))
+
 (deftype ^:private ArrayVectorIterator [prop->key key->prop arr ^:mutable i cnt]
   Object
   (hasNext [_]
@@ -696,10 +782,9 @@
   (-invoke [coll k not-found]
     (-nth coll k not-found))
 
-  #_#_
   IEditableCollection
   (-as-transient [coll]
-    #_(TransientVector. cnt shift (tv-editable-root root) (tv-editable-tail tail)))
+    (TransientArrayVector. true (aclone arr) prop->key key->prop))
 
   IReversible
   (-rseq [coll]
