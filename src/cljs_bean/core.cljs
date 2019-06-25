@@ -38,6 +38,9 @@
     (and (keyword? k) (identical? prop->key keyword))
     (and (string? k) (identical? prop->key identity))))
 
+(defn- recursive-bean? [x]
+  (and (bean? x) (.-recursive? x)))
+
 (deftype ^:private TransientBean [^:mutable ^boolean editable?
                                   obj prop->key key->prop ^boolean recursive?
                                   ^:mutable __cnt]
@@ -96,7 +99,7 @@
         (do
           (unchecked-set obj (key->prop k)
             (cond-> v
-              (and recursive? (bean? v)) object
+              (and recursive? (recursive-bean? v)) object
               (and recursive? (instance? ArrayVector v)) .-arr))
           (set! __cnt nil)
           tcoll)
@@ -319,7 +322,7 @@
         (doto (gobj/clone obj) (unchecked-set (key->prop k)
                                  ;; TODO short circuit this
                                  (cond-> v
-                                   (and recursive? (bean? v)) object
+                                   (and recursive? (recursive-bean? v)) object
                                    (and recursive? (instance? ArrayVector v)) .-arr)))
         prop->key key->prop recursive? nil nil nil)
       (-assoc (with-meta (snapshot obj prop->key key->prop recursive?) meta) k v)))
@@ -404,7 +407,7 @@
         (-conj! (transient (vec arr)) o)
         (do
           (.push arr (cond-> o
-                       (bean? o) object
+                       (recursive-bean? o) object
                        (instance? ArrayVector o) .-arr))
           tcoll))
       (throw (js/Error. "conj! after persistent!"))))
@@ -430,7 +433,7 @@
         (cond
           (and (<= 0 n) (< n (alength arr)))
           (do (aset arr n (cond-> val
-                            (bean? val) object
+                            (recursive-bean? val) object
                             (instance? ArrayVector val) .-arr))
               tcoll)
           (== n (alength arr)) (-conj! tcoll val)
@@ -641,7 +644,7 @@
       (let [new-arr (aclone arr)]
         (unchecked-set new-arr (alength new-arr)
           (cond-> o
-            (bean? o) object
+            (recursive-bean? o) object
             (instance? ArrayVector o) .-arr))
         (ArrayVector. meta prop->key key->prop new-arr nil))))
 
@@ -716,7 +719,7 @@
         (-assoc-n (vec arr) n val)
         (let [new-arr (aclone arr)]
           (aset new-arr n (cond-> val
-                            (bean? val) object
+                            (recursive-bean? val) object
                             (instance? ArrayVector val) .-arr))
           (ArrayVector. meta prop->key key->prop new-arr nil)))
       (== n (alength arr)) (-conj coll val)
