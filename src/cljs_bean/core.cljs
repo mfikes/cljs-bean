@@ -403,10 +403,9 @@
       (if (or (object? o) (array? o))
         (-conj! (transient (vec arr)) o)
         (do
-          (unchecked-set arr (alength arr)
-            (cond-> o
-              (bean? o) object
-              (instance? ArrayVector o) .-arr))
+          (.push arr (cond-> o
+                       (bean? o) object
+                       (instance? ArrayVector o) .-arr))
           tcoll))
       (throw (js/Error. "conj! after persistent!"))))
 
