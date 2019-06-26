@@ -1,7 +1,21 @@
 (ns cljs-bean.core-test
   (:require
-   [clojure.test :refer [are deftest is testing]]
-   [cljs-bean.core :refer [bean bean? object ->clj ->js]]))
+    [clojure.test :refer [are deftest is testing]]
+    [clojure.test.check :as tc]
+    [clojure.test.check.clojure-test :refer [defspec]]
+    [clojure.test.check.generators :as gen]
+    [clojure.test.check.properties :as prop :include-macros true]
+    [cljs-bean.core :refer [bean bean? object ->clj ->js]]
+    [clojure.walk :as walk]))
+
+(def simple-type-printable
+  (gen/one-of [gen/int gen/large-integer (gen/double* {:NaN? false}) gen/char-ascii gen/string-ascii gen/boolean
+               gen/keyword gen/keyword-ns gen/symbol gen/symbol-ns gen/uuid]))
+
+(def gen-any
+  "Like any, but avoids characters that the shell will interpret as actions,
+  like 7 and 14 (bell and alternate character set command)"
+  (gen/recursive-gen gen/container-type simple-type-printable))
 
 (defn recursive-bean? [x]
   (and (bean? x) (.-recursive? x)))
@@ -738,6 +752,12 @@
   (is (fn? (->clj (fn []))))
   (is (vector? (->clj #js [1])))
   (is (recursive-bean? (->clj #js {:a 1}))))
+
+(defspec roundtrip-1
+  1000
+  (prop/for-all [j (gen/fmap ->js gen-any)]
+    (let [c (->clj j)]
+      (= c (->clj (->js c))))))
 
 (deftest issue-38-test
   (let [b (bean #js {:a 1})]
