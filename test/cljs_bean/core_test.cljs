@@ -754,15 +754,27 @@
   (is (recursive-bean? (->clj #js {:a 1}))))
 
 (defspec roundtrip-1
-  1000
+  100
   (prop/for-all [j (gen/fmap ->js gen-any)]
     (let [c (->clj j)]
       (= c (-> c ->js ->clj)))))
 
 (defspec roundtrip-2
-  1000
+  100
+  (prop/for-all [j (gen/fmap ->js gen-any)]
+    (let [c (js->clj j :keywordize-keys true)]
+      (= c (-> c ->js ->clj)))))
+
+(defspec roundtrip-3
+  100
   (prop/for-all [j (gen/fmap ->js gen-any)]
     (let [c (->clj j)]
+      (= c (-> c ->js ->clj ->js ->clj)))))
+
+(defspec roundtrip-4
+  100
+  (prop/for-all [j (gen/fmap ->js gen-any)]
+    (let [c (js->clj j :keywordize-keys true)]
       (= c (-> c ->js ->clj ->js ->clj)))))
 
 (deftest issue-38-test
