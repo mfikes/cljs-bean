@@ -759,6 +759,12 @@
     (let [c (->clj j)]
       (= c (->clj (->js c))))))
 
+(defspec roundtrip-2
+  1000
+  (prop/for-all [j (gen/fmap ->js gen-any)]
+    (let [c (->clj j)]
+      (= c (->clj (->js (->clj (->js c))))))))
+
 (deftest issue-38-test
   (let [b (bean #js {:a 1})]
     (is (== 1 (count b)))
