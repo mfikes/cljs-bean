@@ -757,13 +757,13 @@
   1000
   (prop/for-all [j (gen/fmap ->js gen-any)]
     (let [c (->clj j)]
-      (= c (->clj (->js c))))))
+      (= c (-> c ->js ->clj)))))
 
 (defspec roundtrip-2
   1000
   (prop/for-all [j (gen/fmap ->js gen-any)]
     (let [c (->clj j)]
-      (= c (->clj (->js (->clj (->js c))))))))
+      (= c (-> c ->js ->clj ->js ->clj)))))
 
 (deftest issue-38-test
   (let [b (bean #js {:a 1})]
