@@ -8,14 +8,12 @@
     [cljs-bean.core :refer [bean bean? object ->clj ->js]]
     [clojure.walk :as walk]))
 
-(def simple-type-printable
+(def simple-type-printable-no-nan
   (gen/one-of [gen/int gen/large-integer (gen/double* {:NaN? false}) gen/char-ascii gen/string-ascii gen/boolean
                gen/keyword gen/keyword-ns gen/symbol gen/symbol-ns gen/uuid]))
 
 (def gen-any
-  "Like any, but avoids characters that the shell will interpret as actions,
-  like 7 and 14 (bell and alternate character set command)"
-  (gen/recursive-gen gen/container-type simple-type-printable))
+  (gen/recursive-gen gen/container-type simple-type-printable-no-nan))
 
 (defn recursive-bean? [x]
   (and (bean? x) (.-recursive? x)))
