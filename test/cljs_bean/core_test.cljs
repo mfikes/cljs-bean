@@ -742,6 +742,22 @@
   (let [b (bean #js {:myInc (fn [x] (inc x))})]
     (is (= 2 (.myInc (object b) 1)))))
 
+(deftest vec-dot-toString-test
+  (is (= "[]" (.toString (->clj #js []))))
+  (is (= "[1]" (.toString (->clj #js [1]))))
+  (is (= "[1 2]" (.toString (->clj #js [1 2]))))
+  (is (= "[[]]" (.toString (->clj #js [#js []]))))
+  (is (= "[[1]]" (.toString (->clj #js [#js [1]]))))
+  (is (= "[{:a 1}]" (.toString (->clj #js [#js {:a 1}])))))
+
+(deftest vec-dot-equiv-test
+  (is (.equiv (->clj #js []) []))
+  (is (.equiv (->clj #js [1]) [1]))
+  (is (.equiv (->clj #js [1 2]) [1 2]))
+  (is (.equiv (->clj #js [#js []]) [[]]))
+  (is (.equiv (->clj #js [#js [1]]) [[1]]))
+  (is (.equiv (->clj #js [#js {:a 1}]) [{:a 1}])))
+
 (deftest ->clj-test
   (is (nil? (->clj nil)))
   (is (true? (->clj true)))
