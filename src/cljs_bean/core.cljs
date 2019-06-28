@@ -9,6 +9,40 @@
 
 (def ^:private lookup-sentinel #js {})
 
+(defn- -indexOf
+  ([coll x]
+   (-indexOf coll x 0))
+  ([coll x start]
+   (let [len (count coll)]
+     (if (>= start len)
+       -1
+       (loop [idx (cond
+                    (pos? start) start
+                    (neg? start) (max 0 (+ start len))
+                    :else start)]
+         (if (< idx len)
+           (if (= (nth coll idx) x)
+             idx
+             (recur (inc idx)))
+           -1))))))
+
+(defn- -lastIndexOf
+  ([coll x]
+   (-lastIndexOf coll x (count coll)))
+  ([coll x start]
+   (let [len (count coll)]
+     (if (zero? len)
+       -1
+       (loop [idx (cond
+                    (pos? start) (min (dec len) start)
+                    (neg? start) (+ len start)
+                    :else start)]
+         (if (>= idx 0)
+           (if (= (nth coll idx) x)
+             idx
+             (recur (dec idx)))
+           -1))))))
+
 (defn- ->val [x prop->key key->prop]
   (cond
     (number? x) x
@@ -608,7 +642,7 @@
   (indexOf [coll x start]
     (-indexOf coll x start))
   (lastIndexOf [coll x]
-    (-lastIndexOf coll x (alength coll)))
+    (-lastIndexOf coll x))
   (lastIndexOf [coll x start]
     (-lastIndexOf coll x start))
 

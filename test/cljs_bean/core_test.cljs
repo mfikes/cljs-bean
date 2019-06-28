@@ -769,6 +769,17 @@
   (is (== -1 (.indexOf (->clj #js [#js {:a 1}]) {:a 2} 1)))
   (is (== -1 (.indexOf (->clj #js [#js {:a 1}]) {:a 1} 1))))
 
+(deftest vec-dot-lastIndexOf-test
+  (is (zero? (.lastIndexOf (->clj #js [0]) 0)))
+  (is (zero? (.lastIndexOf (->clj #js [0]) 0 1)))
+  (is (== -1 (.lastIndexOf (->clj #js [0]) 1)))
+  (is (== -1 (.lastIndexOf (->clj #js [0]) 1 1)))
+  (is (zero? (.lastIndexOf (->clj #js [#js {:a 1}]) {:a 1})))
+  (is (zero? (.lastIndexOf (->clj #js [#js {:a 1}]) {:a 1} 0)))
+  (is (== -1 (.lastIndexOf (->clj #js [#js {:a 1}]) {:a 2})))
+  (is (== -1 (.lastIndexOf (->clj #js [#js {:a 1}]) {:a 2} 1)))
+  (is (zero? (.lastIndexOf (->clj #js [#js {:a 1}]) {:a 1} 1))))
+
 (deftest ->clj-test
   (is (nil? (->clj nil)))
   (is (true? (->clj true)))
