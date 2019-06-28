@@ -831,6 +831,14 @@
   (is (= [[]] (conj (->clj #js []) (->clj #js []))))
   (is (= [{:a 1}] (conj (->clj #js []) (->clj #js {:a 1})))))
 
+(deftest vec-empty-test
+  (is (= [] (empty (->clj #js [1]))))
+  (is (zero? (count (empty (->clj #js [1])))))
+  (is (empty? (empty (->clj #js [1]))))
+  (let [m (with-meta (->clj #js [1]) {:foo true})]
+    (= {:foo true} (meta (empty m))))
+  (is (= [1] (assoc (empty (->clj #js [])) 0 1))))
+
 (deftest ->clj-test
   (is (nil? (->clj nil)))
   (is (true? (->clj true)))
