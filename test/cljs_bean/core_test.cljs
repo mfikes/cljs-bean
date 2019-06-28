@@ -823,6 +823,14 @@
   (is (= [{:a 1}] (pop (->clj #js [#js {:a 1} 2]))))
   (is (= [[]] (pop (->clj #js [#js [] #js []])))))
 
+(deftest vec-conj-test
+  (is (= [1] (conj (->clj #js []) 1)))
+  (is (= [0 1] (conj (->clj #js [0]) 1)))
+  (is (= [[]] (conj (->clj #js []) [])))
+  (is (not= [[]] (conj (->clj #js []) #js [])))
+  (is (= [[]] (conj (->clj #js []) (->clj #js []))))
+  (is (= [{:a 1}] (conj (->clj #js []) (->clj #js {:a 1})))))
+
 (deftest ->clj-test
   (is (nil? (->clj nil)))
   (is (true? (->clj true)))
