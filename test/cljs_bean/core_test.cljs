@@ -859,6 +859,11 @@
   (is (= [2] (rest (seq (->clj #js [1 2])))))
   (is (= [2] (next (seq (->clj #js [1 2]))))))
 
+(deftest vec-count-test
+  (is (zero? (count (->clj #js []))))
+  (is (== 1 (count (->clj #js [1]))))
+  (is (== 2 (count (->clj #js [1 2])))))
+
 (deftest ->clj-test
   (is (nil? (->clj nil)))
   (is (true? (->clj true)))
