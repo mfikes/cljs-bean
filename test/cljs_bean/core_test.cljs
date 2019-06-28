@@ -806,6 +806,15 @@
   (let [m {:x 1}]
     (is (= m (meta (conj (with-meta (->clj #js [1 2]) m) 3))))))
 
+(deftest peek-test
+  (is (nil? (peek (->clj #js []))))
+  (is (== 1 (peek (->clj #js [1]))))
+  (is (== 2 (peek (->clj #js [1 2]))))
+  (is (= [] (peek (->clj #js [1 #js []]))))
+  (is (= [1] (peek (->clj #js [1 #js [1]]))))
+  (is (= {:a 1} (peek (->clj #js [1 #js {:a 1}]))))
+  (is (= [{:a 1}] (peek (->clj #js [1 #js [#js {:a 1}]])))))
+
 (deftest ->clj-test
   (is (nil? (->clj nil)))
   (is (true? (->clj true)))
