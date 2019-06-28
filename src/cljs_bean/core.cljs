@@ -717,7 +717,9 @@
 
   IIndexed
   (-nth [coll n]
-    (->val (aget arr n) prop->key key->prop))
+    (if (and (<= 0 n) (< n (alength arr)))
+      (->val (aget arr n) prop->key key->prop)
+      (throw (js/Error. (str "No item " n " in vector of length " (alength arr))))))
   (-nth [coll n not-found]
     (if (and (<= 0 n) (< n (alength arr)))
       (->val (aget arr n) prop->key key->prop)

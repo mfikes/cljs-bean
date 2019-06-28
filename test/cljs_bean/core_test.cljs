@@ -864,6 +864,13 @@
   (is (== 1 (count (->clj #js [1]))))
   (is (== 2 (count (->clj #js [1 2])))))
 
+(deftest vec-nth-test
+  (is (thrown-with-msg? js/Error #"No item 1 in vector of length 0" (-nth (->clj #js []) 1)))
+  (is (thrown-with-msg? js/Error #"No item -1 in vector of length 0" (-nth (->clj #js []) -1)))
+  (is (== 1 (-nth (->clj #js [1]) 0)))
+  (is (== 2 (-nth (->clj #js [1 2]) 1)))
+  (is (= :x (-nth (->clj #js [1]) 1 :x))))
+
 (deftest ->clj-test
   (is (nil? (->clj nil)))
   (is (true? (->clj true)))
