@@ -806,7 +806,7 @@
   (let [m {:x 1}]
     (is (= m (meta (conj (with-meta (->clj #js [1 2]) m) 3))))))
 
-(deftest peek-test
+(deftest vec-peek-test
   (is (nil? (peek (->clj #js []))))
   (is (== 1 (peek (->clj #js [1]))))
   (is (== 2 (peek (->clj #js [1 2]))))
@@ -814,6 +814,14 @@
   (is (= [1] (peek (->clj #js [1 #js [1]]))))
   (is (= {:a 1} (peek (->clj #js [1 #js {:a 1}]))))
   (is (= [{:a 1}] (peek (->clj #js [1 #js [#js {:a 1}]])))))
+
+(deftest vec-pop-test
+  (is (thrown-with-msg? js/Error #"Can't pop empty vector" (pop (->clj #js[]))))
+  (is (= [] (pop (->clj #js [1]))))
+  (is (= [1] (pop (->clj #js [1 2]))))
+  (is (= [[]] (pop (->clj #js [#js [] 2]))))
+  (is (= [{:a 1}] (pop (->clj #js [#js {:a 1} 2]))))
+  (is (= [[]] (pop (->clj #js [#js [] #js []])))))
 
 (deftest ->clj-test
   (is (nil? (->clj nil)))
