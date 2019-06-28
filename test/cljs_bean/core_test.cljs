@@ -839,6 +839,14 @@
     (= {:foo true} (meta (empty m))))
   (is (= [1] (assoc (empty (->clj #js [])) 0 1))))
 
+(deftest vec-equiv-test
+  (is (-equiv (->clj #js []) []))
+  (is (-equiv (->clj #js []) (->clj #js [])))
+  (is (-equiv (->clj #js [:a 1]) [:a 1]))
+  (is (-equiv (->clj #js [:a 1]) (->clj #js [:a 1])))
+  (is (-equiv (->clj #js [:a #js {:b 2}]) [:a {:b 2}]))
+  (is (-equiv (->clj #js [:a #js {:b 2}]) (->clj #js [:a #js {:b 2}]))))
+
 (deftest ->clj-test
   (is (nil? (->clj nil)))
   (is (true? (->clj true)))
