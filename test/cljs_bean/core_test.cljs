@@ -780,6 +780,22 @@
   (is (== -1 (.lastIndexOf (->clj #js [#js {:a 1}]) {:a 2} 1)))
   (is (zero? (.lastIndexOf (->clj #js [#js {:a 1}]) {:a 1} 1))))
 
+(deftest vec-clone-test
+  (let [v (bean #js [1])
+        _ (count v)
+        c (clone v)]
+    (is (= v c))
+    (is (not (identical? v c)))
+    (is (nil? (meta c)))
+    (is (== 1 (count c))))
+  (let [v (with-meta (bean #js [1]) {:foo true})
+        _ (count v)
+        c (clone v)]
+    (is (= v c))
+    (is (not (identical? v c)))
+    (is (= {:foo true} (meta c)))
+    (is (== 1 (count c)))))
+
 (deftest ->clj-test
   (is (nil? (->clj nil)))
   (is (true? (->clj true)))
