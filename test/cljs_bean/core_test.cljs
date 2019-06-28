@@ -851,6 +851,14 @@
   (is (== (hash [:a 1]) (hash (->clj #js [:a 1]))))
   (is (== (hash [:a {:b 2}]) (hash (->clj #js [:a #js {:b 2}])))))
 
+(deftest vec-seq-test
+  (is (nil? (seq (->clj #js []))))
+  (is (= [1] (seq (->clj #js [1]))))
+  (is (= [] (rest (seq (->clj #js [1])))))
+  (is (nil? (next (seq (->clj #js [1])))))
+  (is (= [2] (rest (seq (->clj #js [1 2])))))
+  (is (= [2] (next (seq (->clj #js [1 2]))))))
+
 (deftest ->clj-test
   (is (nil? (->clj nil)))
   (is (true? (->clj true)))
