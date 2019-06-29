@@ -1108,6 +1108,10 @@
     (persistent! t)
     (is (thrown-with-msg? js/Error #"nth after persistent!" (-lookup t 17 :not-found)))))
 
+(deftest vec-transient-invoke-test
+  (is (== 1 ((assoc! (transient (->clj #js [])) 0 1) 0)))
+  (is (= :not-found ((assoc! (transient (->clj #js [])) 0 1) :b :not-found))))
+
 (deftest ->clj-test
   (is (nil? (->clj nil)))
   (is (true? (->clj true)))
