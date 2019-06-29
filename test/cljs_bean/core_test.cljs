@@ -1089,6 +1089,16 @@
   (let [t (doto (assoc! (transient (->clj #js [])) 0 1) persistent!)]
     (is (thrown-with-msg? js/Error #"assoc! after persistent!" (assoc! t 0 1)))))
 
+(deftest vec-pop!-test
+  (is (= [] (persistent! (pop! (transient (->clj #js [1]))))))
+  (is (= [1] (persistent! (pop! (transient (->clj #js [1 2]))))))
+  (is (thrown-with-msg? js/Error #"Can't pop empty vector" (pop! (transient (->clj #js [])))))
+  (is (thrown-with-msg? js/Error #"pop! after persistent!"
+        (let [t (transient (->clj #js [1 2]))]
+          (pop! t)
+          (persistent! t)
+          (pop! t)))))
+
 (deftest vec-conj!-test
   (is (= [1] (persistent! (conj! (transient (->clj #js [])) 1))))
   (is (= [{:a 1}] (persistent! (conj! (transient (->clj #js [])) (bean #js {:a 1})))))
