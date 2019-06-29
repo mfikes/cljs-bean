@@ -1072,6 +1072,7 @@
 (deftest vec-keywordize-keys-false
   (is (= {"a" 1, "b" [{"c" 2}]}
         (bean #js {:a 1 :b #js [#js {:c 2}]} :recursive true :keywordize-keys false))))
+
 (deftest ->clj-test
   (is (nil? (->clj nil)))
   (is (true? (->clj true)))
