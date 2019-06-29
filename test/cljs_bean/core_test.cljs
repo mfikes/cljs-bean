@@ -953,6 +953,13 @@
   (is (= "([1])" (.toString (seq (->clj #js [#js [1]])))))
   (is (= "({:a 1})" (.toString (seq (->clj #js [#js {:a 1}]))))))
 
+(deftest vec-seq-dot-equiv-test
+  (is (.equiv (seq (->clj #js [1])) [1]))
+  (is (.equiv (seq (->clj #js [1 2])) [1 2]))
+  (is (.equiv (seq (->clj #js [#js []])) [[]]))
+  (is (.equiv (seq (->clj #js [#js [1]])) [[1]]))
+  (is (.equiv (seq (->clj #js [#js {:a 1}])) [{:a 1}])))
+
 (deftest ->clj-test
   (is (nil? (->clj nil)))
   (is (true? (->clj true)))
