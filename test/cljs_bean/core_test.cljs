@@ -1063,6 +1063,15 @@
   (is (== (hash (seq [1])) (hash (seq (->clj #js [1])))))
   (is (== (hash (seq [:a {:b 2}])) (hash (seq (->clj #js [:a #js {:b 2}]))))))
 
+(deftest coll-iter-vec-seq-match
+  (is (seq-iter-match (->clj #js [])))
+  (is (seq-iter-match (->clj #js [1])))
+  (is (seq-iter-match (->clj #js [:a #js {:b 2}])))
+  (is (seq-iter-match (->clj #js [1 2]))))
+
+(deftest vec-keywordize-keys-false
+  (is (= {"a" 1, "b" [{"c" 2}]}
+        (bean #js {:a 1 :b #js [#js {:c 2}]} :recursive true :keywordize-keys false))))
 (deftest ->clj-test
   (is (nil? (->clj nil)))
   (is (true? (->clj true)))
