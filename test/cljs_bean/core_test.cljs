@@ -910,6 +910,13 @@
   (is (== 33 (reduce + 30 (->clj #js [1 2]))))
   (is (== 36 (reduce + 30 (->clj #js [1 2 3])))))
 
+(deftest vec-kv-reduce-test
+  (is (= [0 1 1 2 2 3] (reduce-kv (fn [acc k v]
+                                    (conj acc k v)) []
+                         (->clj #js [1 2 3]))))
+  (is (== 17 (reduce-kv (constantly (reduced 17)) []
+               (->clj #js [1 2 3])))))
+
 (deftest ->clj-test
   (is (nil? (->clj nil)))
   (is (true? (->clj true)))
