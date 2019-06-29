@@ -1040,6 +1040,25 @@
 (deftest vec-seq-empty-test
   (is (= [] (empty (seq (->clj #js [1]))))))
 
+(deftest vec-seq-reduce-test
+  (is (== 3 (reduce + (seq (->clj #js [1 2])))))
+  (is (== :empty (reduce (fn []
+                           :empty)
+                   (seq (->clj #js [])))))
+  (is (== 7 (reduce (fn [r e]
+                      (reduced 7))
+              (seq (->clj #js [1 2])))))
+  (is (== 3 (reduce +
+              0
+              (seq (->clj #js [1 2])))))
+  (is (== 0 (reduce +
+              0
+              (seq (->clj #js [])))))
+  (is (== 7 (reduce (fn [r e]
+                      (reduced 7))
+              0
+              (seq (bean #js [1 2]))))))
+
 (deftest ->clj-test
   (is (nil? (->clj nil)))
   (is (true? (->clj true)))
