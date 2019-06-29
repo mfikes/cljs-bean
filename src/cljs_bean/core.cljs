@@ -53,8 +53,10 @@
     (array? x) (ArrayVector. nil prop->key key->prop x nil)
     :else x))
 
+(def ^:private empty-map (.. js/cljs -core -PersistentArrayMap -EMPTY))
+
 (defn- snapshot [x prop->key key->prop recursive?]
-  (let [result (volatile! (transient {}))]
+  (let [result (volatile! (transient empty-map))]
     (gobj/forEach x (fn [v k _] (vswap! result assoc! (prop->key k)
                                   (cond-> v
                                     recursive? (->val prop->key key->prop)))))
@@ -896,3 +898,10 @@
     (recursive-bean? x) (object x)
     (instance? ArrayVector x) (.-arr x)
     :else (clj->js x :keyword-fn default-key->prop)))
+
+(defn- ^:private set-empty-colls!
+  "Set empty map and array to Bean and ArrayVector. Useful for testing."
+  []
+  (set! (.. js/cljs -core -PersistentArrayMap -EMPTY) (->clj #js {}))
+  (set! (.. js/cljs -core -PersistentVector -EMPTY) (->clj #js []))
+  nil)
