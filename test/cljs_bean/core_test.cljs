@@ -871,6 +871,13 @@
   (is (== 2 (-nth (->clj #js [1 2]) 1)))
   (is (= :x (-nth (->clj #js [1]) 1 :x))))
 
+(deftest vec-lookup-test
+  (is (== 0 (get (->clj #js [0]) 0)))
+  (is (nil? (get (->clj #js [0]) 1)))
+  (is (nil? (get (->clj #js [0]) :X)))
+  (is (== 0 (get (->clj #js [0]) 0 17)))
+  (is (== 17 (get (->clj #js [0]) 1 17))))
+
 (deftest ->clj-test
   (is (nil? (->clj nil)))
   (is (true? (->clj true)))
