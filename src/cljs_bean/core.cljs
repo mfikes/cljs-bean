@@ -465,7 +465,7 @@
         (cond
           (and (<= 0 n) (< n (alength arr)))
           (do (aset arr n (cond-> val
-                            (recursive-bean? val) object
+                            (bean? val) object
                             (instance? ArrayVector val) .-arr))
               tcoll)
           (== n (alength arr)) (-conj! tcoll val)
@@ -674,7 +674,7 @@
       (let [new-arr (aclone arr)]
         (unchecked-set new-arr (alength new-arr)
           (cond-> o
-            (recursive-bean? o) object
+            (bean? o) object
             (instance? ArrayVector o) .-arr))
         (ArrayVector. meta prop->key key->prop new-arr nil))))
 
@@ -751,7 +751,7 @@
         (-assoc-n (vec arr) n val)
         (let [new-arr (aclone arr)]
           (aset new-arr n (cond-> val
-                            (recursive-bean? val) object
+                            (bean? val) object
                             (instance? ArrayVector val) .-arr))
           (ArrayVector. meta prop->key key->prop new-arr nil)))
       (== n (alength arr)) (-conj coll val)
