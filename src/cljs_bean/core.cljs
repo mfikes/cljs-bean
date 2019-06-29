@@ -744,7 +744,6 @@
     (when (and (<= 0 n) (< n (alength arr)))
       (MapEntry. n (->val (aget arr n) prop->key key->prop) nil)))
 
-  APersistentVector
   IVector
   (-assoc-n [coll n val]
     (cond

@@ -966,7 +966,8 @@
 
 (deftest vec-subvec-test
   (is (= [2 3] (subvec (->clj #js [1 2 3 4]) 1 3)))
-  (is (= [2 3 4] (subvec (->clj #js [1 2 3 4]) 1))))
+  (is (= [2 3 4] (subvec (->clj #js [1 2 3 4]) 1)))
+  (is (= [17 2 3] (into [17] (subvec (->clj #js [1 2 3]) 1)))))
 
 (deftest vec-iter-test
   (is (iterable? (->clj #js [1])))
