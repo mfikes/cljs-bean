@@ -1037,6 +1037,9 @@
   (is (= [{:a 1}] (conj (seq (->clj #js [])) (->clj #js {:a 1}))))
   (is (= [:x 1] (conj (seq (->clj #js [1])) :x))))
 
+(deftest vec-seq-empty-test
+  (is (= [] (empty (seq (->clj #js [1]))))))
+
 (deftest ->clj-test
   (is (nil? (->clj nil)))
   (is (true? (->clj true)))
