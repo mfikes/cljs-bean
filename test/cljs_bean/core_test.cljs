@@ -548,7 +548,6 @@
 
 (deftest seq-count-test
   (is (counted? (seq (bean #js {:a 1}))))
-  (is (== 0 (count (seq (bean #js {})))))
   (is (== 1 (count (seq (bean #js {:a 1})))))
   (is (== 2 (count (seq (bean #js {:a 1, :b 2})))))
   (is (counted? (rest (seq (bean #js {:a 1, :b 2})))))
@@ -1014,6 +1013,13 @@
 (deftest vec-seq-seq-test
   (is (seqable? (seq (->clj #js [1]))))
   (is (= [1] (seq (seq (->clj #js [1]))))))
+
+(deftest vec-seq-count-test
+  (is (counted? (seq (->clj #js [1]))))
+  (is (== 1 (count (seq (->clj #js [1])))))
+  (is (== 2 (count (seq (->clj #js [1 2])))))
+  (is (counted? (rest (seq (->clj #js [1 2])))))
+  (is (== 1 (count (rest (seq (->clj #js [1 2])))))))
 
 (deftest ->clj-test
   (is (nil? (->clj nil)))
