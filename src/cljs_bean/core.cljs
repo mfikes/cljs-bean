@@ -439,7 +439,7 @@
         (-conj! (transient (vec arr)) o)
         (do
           (.push arr (cond-> o
-                       (recursive-bean? o) object
+                       (bean? o) object
                        (instance? ArrayVector o) .-arr))
           tcoll))
       (throw (js/Error. "conj! after persistent!"))))

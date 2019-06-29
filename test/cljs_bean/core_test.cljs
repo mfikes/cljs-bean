@@ -1089,6 +1089,14 @@
   (let [t (doto (assoc! (transient (->clj #js [])) 0 1) persistent!)]
     (is (thrown-with-msg? js/Error #"assoc! after persistent!" (assoc! t 0 1)))))
 
+(deftest vec-conj!-test
+  (is (= [1] (persistent! (conj! (transient (->clj #js [])) 1))))
+  (is (= [{:a 1}] (persistent! (conj! (transient (->clj #js [])) (bean #js {:a 1})))))
+  (is (instance? @#'cljs-bean.core/ArrayVector
+        (persistent! (conj! (transient (->clj #js [])) (bean #js {:a 1})))))
+  (let [t (doto (conj! (transient (->clj #js [])) 1) persistent!)]
+    (is (thrown-with-msg? js/Error #"conj! after persistent!" (conj! t 1)))))
+
 (deftest ->clj-test
   (is (nil? (->clj nil)))
   (is (true? (->clj true)))
