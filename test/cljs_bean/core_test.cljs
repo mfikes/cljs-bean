@@ -782,14 +782,14 @@
   (is (zero? (.lastIndexOf (->clj #js [#js {:a 1}]) {:a 1} 1))))
 
 (deftest vec-clone-test
-  (let [v (bean #js [1])
+  (let [v (->clj #js [1])
         _ (count v)
         c (clone v)]
     (is (= v c))
     (is (not (identical? v c)))
     (is (nil? (meta c)))
     (is (== 1 (count c))))
-  (let [v (with-meta (bean #js [1]) {:foo true})
+  (let [v (with-meta (->clj #js [1]) {:foo true})
         _ (count v)
         c (clone v)]
     (is (= v c))
@@ -982,6 +982,22 @@
   (is (== -1 (.lastIndexOf (seq (->clj #js [#js {:a 1}])) {:a 2})))
   (is (== -1 (.lastIndexOf (seq (->clj #js [#js {:a 1}])) {:a 2} 1)))
   (is (zero? (.lastIndexOf (seq (->clj #js [#js {:a 1}])) {:a 1} 1))))
+
+(deftest vec-seq-clone-test
+  (let [s (seq (->clj #js [1]))
+        _ (count s)
+        c (clone s)]
+    (is (= s c))
+    (is (not (identical? s c)))
+    (is (nil? (meta c)))
+    (is (== 1 (count c))))
+  (let [s (with-meta (seq (->clj #js [1])) {:foo true})
+        _ (count s)
+        c (clone s)]
+    (is (= s c))
+    (is (not (identical? s c)))
+    (is (= {:foo true} (meta c)))
+    (is (== 1 (count c)))))
 
 (deftest ->clj-test
   (is (nil? (->clj nil)))
