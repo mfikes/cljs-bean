@@ -1164,72 +1164,116 @@
   (and (= expected actual) (not (js-able? actual))))
 
 (deftest nested-update-test
-  (is (expected-js-able? {:a 1, :b 2}
-        (-> #js {:a 1} ->clj (assoc :b 2))))
-  (is (expected-js-able? {:b 2}
-        (-> #js {:a 1} ->clj empty (assoc :b 2))))
-  (is (expected-js-able? {:a 1, :b {:c 3}}
-        (-> #js {:a 1} ->clj (assoc :b (->clj #js {:c 3})))))
-  (is (expected-non-js-able? {:a 1, :b {:c 3}}
-        (-> #js {:a 1} ->clj (assoc :b {:c 3}))))
-  (is (expected-js-able? {:a 1, :b [1]}
-        (-> #js {:a 1} ->clj (assoc :b (->clj #js [1])))))
-  (is (expected-non-js-able? {:a 1, :b [1]}
-        (-> #js {:a 1} ->clj (assoc :b [1]))))
-  (is (expected-js-able? {:a 1}
-        (-> #js {:a 1, :b 2} ->clj (dissoc :b))))
-  (is (expected-js-able? {:a 1, :b 2}
-        (-> #js {:a 1} ->clj (conj [:b 2]))))
-  (is (expected-js-able? {:a 1, :b {:c 3}}
-        (-> #js {:a 1} ->clj (conj [:b (->clj #js {:c 3})]))))
-  (is (expected-non-js-able? {:a 1, :b {:c 3}}
-        (-> #js {:a 1} ->clj (conj [:b {:c 3}]))))
-  (is (expected-js-able? {:a 2}
-        (-> #js {:a 1} ->clj (update :a inc))))
-  (is (expected-js-able? {:a {:b 2}}
-        (-> #js {:a 1} ->clj (update :a (constantly (->clj #js {:b 2}))))))
-  (is (expected-non-js-able? {:a {:b 2}}
-        (-> #js {:a 1} ->clj (update :a (constantly {:b 2})))))
-  (is (expected-js-able? {:a 2}
-        (-> #js {:a 1} ->clj (update-in [:a] inc))))
-
-
-  (is (expected-js-able? [2]
-        (-> #js [1] ->clj (assoc 0 2))))
-  (is (expected-js-able? [1 2]
-        (-> #js [1] ->clj (assoc 1 2))))
-  (is (expected-js-able? [{:c 3}]
-        (-> #js [1] ->clj (assoc 0 (->clj #js {:c 3})))))
-  (is (expected-js-able? [1 {:c 3}]
-        (-> #js [1] ->clj (assoc 1 (->clj #js {:c 3})))))
-  (is (expected-non-js-able? [{:c 3}]
-        (-> #js [1] ->clj (assoc 0 {:c 3}))))
-  (is (expected-js-able? [[1]]
-        (-> #js [1] ->clj (assoc 0 (->clj #js [1])))))
-  (is (expected-non-js-able? [[1]]
-        (-> #js [1] ->clj (assoc 0 [1]))))
-  (is (expected-js-able? [1 [1]]
-        (-> #js [1] ->clj (assoc 1 (->clj #js [1])))))
-  (is (expected-non-js-able? [1 [1]]
-        (-> #js [1] ->clj (assoc 1 [1]))))
-  (is (expected-js-able? [1]
-        (-> #js [1 2] ->clj pop)))
-  (is (expected-js-able? [1 2 3]
-        (-> #js [1] ->clj (conj 2 3))))
-  (is (expected-js-able? [1 {:c 3}]
-        (-> #js [1] ->clj (conj (->clj #js {:c 3})))))
-  (is (expected-non-js-able? [1 {:c 3}]
-        (-> #js [1] ->clj (conj {:c 3}))))
-  (is (expected-js-able? [2]
-        (-> #js [1] ->clj (update 0 inc))))
-  (is (expected-js-able? [1 {:b 2}]
-        (-> #js [1] ->clj (update 1 (constantly (->clj #js {:b 2}))))))
-  (is (expected-non-js-able? [1 {:b 2}]
-        (-> #js [1] ->clj (update 1 (constantly {:b 2})))))
-  (is (expected-non-js-able? [{:b 2}]
-        (-> #js [1] ->clj (update 0 (constantly {:b 2})))))
-  (is (expected-non-js-able? [{:b 2}]
-        (-> #js [1] ->clj (update-in [0] (constantly {:b 2}))))))
+  (testing "map"
+    (is (expected-js-able? {:a 1, :b 2}
+          (-> #js {:a 1} ->clj (assoc :b 2))))
+    (is (expected-js-able? {:b 2}
+          (-> #js {:a 1} ->clj empty (assoc :b 2))))
+    (is (expected-js-able? {:a 1, :b {:c 3}}
+          (-> #js {:a 1} ->clj (assoc :b (->clj #js {:c 3})))))
+    (is (expected-non-js-able? {:a 1, :b {:c 3}}
+          (-> #js {:a 1} ->clj (assoc :b {:c 3}))))
+    (is (expected-js-able? {:a 1, :b [1]}
+          (-> #js {:a 1} ->clj (assoc :b (->clj #js [1])))))
+    (is (expected-non-js-able? {:a 1, :b [1]}
+          (-> #js {:a 1} ->clj (assoc :b [1]))))
+    (is (expected-js-able? {:a 1}
+          (-> #js {:a 1, :b 2} ->clj (dissoc :b))))
+    (is (expected-js-able? {:a 1, :b 2}
+          (-> #js {:a 1} ->clj (conj [:b 2]))))
+    (is (expected-js-able? {:a 1, :b {:c 3}}
+          (-> #js {:a 1} ->clj (conj [:b (->clj #js {:c 3})]))))
+    (is (expected-non-js-able? {:a 1, :b {:c 3}}
+          (-> #js {:a 1} ->clj (conj [:b {:c 3}]))))
+    (is (expected-js-able? {:a 2}
+          (-> #js {:a 1} ->clj (update :a inc))))
+    (is (expected-js-able? {:a {:b 2}}
+          (-> #js {:a 1} ->clj (update :a (constantly (->clj #js {:b 2}))))))
+    (is (expected-non-js-able? {:a {:b 2}}
+          (-> #js {:a 1} ->clj (update :a (constantly {:b 2})))))
+    (is (expected-js-able? {:a 2}
+          (-> #js {:a 1} ->clj (update-in [:a] inc)))))
+  (testing "vector"
+    (is (expected-js-able? [2]
+          (-> #js [1] ->clj (assoc 0 2))))
+    (is (expected-js-able? [1 2]
+          (-> #js [1] ->clj (assoc 1 2))))
+    (is (expected-js-able? [{:c 3}]
+          (-> #js [1] ->clj (assoc 0 (->clj #js {:c 3})))))
+    (is (expected-js-able? [1 {:c 3}]
+          (-> #js [1] ->clj (assoc 1 (->clj #js {:c 3})))))
+    (is (expected-non-js-able? [{:c 3}]
+          (-> #js [1] ->clj (assoc 0 {:c 3}))))
+    (is (expected-js-able? [[1]]
+          (-> #js [1] ->clj (assoc 0 (->clj #js [1])))))
+    (is (expected-non-js-able? [[1]]
+          (-> #js [1] ->clj (assoc 0 [1]))))
+    (is (expected-js-able? [1 [1]]
+          (-> #js [1] ->clj (assoc 1 (->clj #js [1])))))
+    (is (expected-non-js-able? [1 [1]]
+          (-> #js [1] ->clj (assoc 1 [1]))))
+    (is (expected-js-able? [1]
+          (-> #js [1 2] ->clj pop)))
+    (is (expected-js-able? [1 2 3]
+          (-> #js [1] ->clj (conj 2 3))))
+    (is (expected-js-able? [1 {:c 3}]
+          (-> #js [1] ->clj (conj (->clj #js {:c 3})))))
+    (is (expected-non-js-able? [1 {:c 3}]
+          (-> #js [1] ->clj (conj {:c 3}))))
+    (is (expected-js-able? [2]
+          (-> #js [1] ->clj (update 0 inc))))
+    (is (expected-js-able? [1 {:b 2}]
+          (-> #js [1] ->clj (update 1 (constantly (->clj #js {:b 2}))))))
+    (is (expected-non-js-able? [1 {:b 2}]
+          (-> #js [1] ->clj (update 1 (constantly {:b 2})))))
+    (is (expected-non-js-able? [{:b 2}]
+          (-> #js [1] ->clj (update 0 (constantly {:b 2})))))
+    (is (expected-non-js-able? [{:b 2}]
+          (-> #js [1] ->clj (update-in [0] (constantly {:b 2}))))))
+  (testing "vector in map"
+    (is (expected-js-able? {:a [1]}
+          (-> #js {:a #js []} ->clj (update-in [:a] conj 1))))
+    (is (expected-js-able? {:a [1]}
+          (-> #js {:a #js [1 2]} ->clj (update-in [:a] pop))))
+    (is (expected-js-able? {:a [1]}
+          (-> #js {:a #js []} ->clj (update-in [:a] assoc 0 1))))
+    (is (expected-js-able? {:a [1]}
+          (-> #js {:a #js [0]} ->clj (update-in [:a 0] inc)))))
+  (testing "map in vector"
+    (is (expected-js-able? [{:a 1}]
+          (-> #js [1] ->clj (update-in [0] (constantly (->clj #js {:a 1}))))))
+    (is (expected-js-able? [{:a 1}]
+          (-> #js [#js {:a 0}] ->clj (update-in [0 :a] inc))))
+    (is (expected-js-able? [{:a 0, :b 1}]
+          (-> #js [#js {:a 0}] ->clj (assoc-in [0 :b] 1)))))
+  (testing "map in map"
+    (is (expected-js-able? {:a {:b 2}}
+          (-> #js {:a #js {:b 1}} ->clj (assoc-in [:a :b] 2))))
+    (is (expected-js-able? {:a {:b 1, :c 3}}
+          (-> #js {:a #js {:b 1}} ->clj (assoc-in [:a :c] 3))))
+    (is (expected-js-able? {:a {:b 2}}
+          (-> #js {:a #js {:b 1}} ->clj (update-in [:a :b] inc)))))
+  (testing "vector in vector"
+    (is (expected-js-able? [[2]]
+          (-> #js [#js [1]] ->clj (assoc-in [0 0] 2))))
+    (is (expected-js-able? [[1 3]]
+          (-> #js [#js [1]]  ->clj (assoc-in [0 1] 3))))
+    (is (expected-js-able? [[2]]
+          (-> #js [#js [1]] ->clj (update-in [0 0] inc))))
+    (is (expected-js-able? [[1]]
+          (-> #js [#js [1 2]] ->clj (update-in [0] pop)))))
+  (testing "map in map in map"
+    (is (expected-js-able? {:a {:b {:c 3}}}
+          (-> #js {:a #js {:b #js {:c 0}}} ->clj (assoc-in [:a :b :c] 3))))
+    (is (expected-js-able? {:a {:b {:c 0 :d 4}}}
+          (-> #js {:a #js {:b #js {:c 0}}} ->clj (update-in [:a :b] assoc :d 4))))
+    (is (expected-non-js-able? {:a {:b {:c 3}}}
+          (-> #js {} ->clj (assoc-in [:a :b :c] 3)))))
+  (testing "vector in vector in vector"
+    (is (expected-js-able? [[[3]]]
+          (-> #js [#js [#js [0]]] ->clj (assoc-in [0 0 0] 3))))
+    (is (expected-js-able? [[[0 4]]]
+          (-> #js [#js [#js [0]]] ->clj (update-in [0 0] assoc 1 4))))))
 
 (deftest ->clj-test
   (is (nil? (->clj nil)))
