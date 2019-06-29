@@ -946,6 +946,13 @@
   (is (some? (iter (->clj #js [1]))))
   (is (= '[:a] (sequence (->clj #js [:a])))))
 
+(deftest vec-seq-dot-toString-test
+  (is (= "(1)" (.toString (seq (->clj #js [1])))))
+  (is (= "(1 2)" (.toString (seq (->clj #js [1 2])))))
+  (is (= "([])" (.toString (seq (->clj #js [#js []])))))
+  (is (= "([1])" (.toString (seq (->clj #js [#js [1]])))))
+  (is (= "({:a 1})" (.toString (seq (->clj #js [#js {:a 1}]))))))
+
 (deftest ->clj-test
   (is (nil? (->clj nil)))
   (is (true? (->clj true)))
