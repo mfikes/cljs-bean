@@ -999,6 +999,14 @@
     (is (= {:foo true} (meta c)))
     (is (== 1 (count c)))))
 
+(deftest vec-seq-meta-test
+  (let [s (seq (->clj #js [:a 1]))]
+    (count s)
+    (is (= {:foo true} (meta (with-meta s {:foo true}))))
+    (is (== 2 (count (with-meta s {:foo true})))))
+  (let [m {:x 1}]
+    (is (nil? (meta (conj (with-meta (seq (->clj #js [1 2])) m) 3))))))
+
 (deftest ->clj-test
   (is (nil? (->clj nil)))
   (is (true? (->clj true)))
