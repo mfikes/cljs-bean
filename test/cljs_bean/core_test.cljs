@@ -934,6 +934,10 @@
   (is (= [3 2 1] (reverse (->clj #js [1 2 3]))))
   (is (nil? (rseq (->clj #js [])))))
 
+(deftest vec-subvec-test
+  (is (= [2 3] (subvec (->clj #js [1 2 3 4]) 1 3)))
+  (is (= [2 3 4] (subvec (->clj #js [1 2 3 4]) 1))))
+
 (deftest ->clj-test
   (is (nil? (->clj nil)))
   (is (true? (->clj true)))
