@@ -1065,6 +1065,8 @@
 
 (deftest vec-seq-reduce-test
   (is (== 3 (reduce + (seq (->clj #js [1 2])))))
+  (is (== 14 (reduce + (rest (->clj #js [1 2 3 4 5])))))
+  (is (== 114 (reduce + 100 (rest (->clj #js [1 2 3 4 5])))))
   (is (== :empty (reduce (fn []
                            :empty)
                    (seq (->clj #js [])))))

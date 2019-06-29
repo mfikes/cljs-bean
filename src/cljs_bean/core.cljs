@@ -604,19 +604,19 @@
 
   IReduce
   (-reduce [coll f]
-    (let [cnt (-count coll)]
-      (loop [val (-nth coll i), n (inc i)]
+    (let [cnt (alength arr)]
+      (loop [val (->val (aget arr i) prop->key key->prop), n (inc i)]
         (if (< n cnt)
-          (let [nval (f val (-nth coll n))]
+          (let [nval (f val (->val (aget arr n) prop->key key->prop))]
             (if (reduced? nval)
               @nval
               (recur nval (inc n))))
           val))))
   (-reduce [coll f start]
-    (let [cnt (-count coll)]
+    (let [cnt (alength arr)]
       (loop [val start, n i]
         (if (< n cnt)
-          (let [nval (f val (-nth coll n))]
+          (let [nval (f val (->val (aget arr n) prop->key key->prop))]
             (if (reduced? nval)
               @nval
               (recur nval (inc n))))
