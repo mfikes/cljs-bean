@@ -1027,9 +1027,15 @@
   (is (thrown-with-msg? js/Error #"Index out of bounds" (nth (seq (->clj #js [1])) 1)))
   (is (= ::not-found (nth (seq (->clj #js [1])) 1 ::not-found))))
 
-(deftest seq-equiv-test
+(deftest vec-seq-equiv-test
   (is (-equiv (seq (->clj #js [1])) [1]))
   (is (-equiv (seq (->clj #js [#js {:a 1}])) [{:a 1}])))
+
+(deftest vec-seq-conj-test
+  (is (= [1] (conj (seq (->clj #js [])) 1)))
+  (is (= [:x] (conj (seq (->clj #js [])) :x)))
+  (is (= [{:a 1}] (conj (seq (->clj #js [])) (->clj #js {:a 1}))))
+  (is (= [:x 1] (conj (seq (->clj #js [1])) :x))))
 
 (deftest ->clj-test
   (is (nil? (->clj nil)))
