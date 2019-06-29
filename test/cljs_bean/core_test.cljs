@@ -924,6 +924,16 @@
   (is (== 19 ((->clj #js [0]) 12 19)))
   (is (== 0 ((->clj #js [0]) 0 11))))
 
+(deftest vec-transient-test
+  (is (= [1] (persistent! (transient (->clj #js [1])))))
+  (is (= [0 1 2] (into (->clj #js []) (range 3))))
+  (is (= [17 0 1 2] (into (->clj #js [17]) (range 3)))))
+
+(deftest vec-reverse-test
+  (is (reversible? (->clj #js [17])))
+  (is (= [3 2 1] (reverse (->clj #js [1 2 3]))))
+  (is (nil? (rseq (->clj #js [])))))
+
 (deftest ->clj-test
   (is (nil? (->clj nil)))
   (is (true? (->clj true)))
