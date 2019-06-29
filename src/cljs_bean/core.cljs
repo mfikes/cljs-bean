@@ -577,12 +577,12 @@
   (-nth [_ n]
     (let [i (+ n i)]
       (if (and (<= 0 i) (< i (alength arr)))
-        (aget arr i)
+        (->val (aget arr i) prop->key key->prop)
         (throw (js/Error. "Index out of bounds")))))
   (-nth [_ n not-found]
     (let [i (+ n i)]
       (if (and (<= 0 i) (< i (alength arr)))
-        (aget arr i)
+        (->val (aget arr i) prop->key key->prop)
         not-found)))
 
   ISequential

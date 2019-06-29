@@ -472,6 +472,7 @@
   (is (zero? (.indexOf (seq (bean #js {:a 1})) [:a 1] 0)))
   (is (== -1 (.indexOf (seq (bean #js {:a 1})) [:a 2])))
   (is (== -1 (.indexOf (seq (bean #js {:a 1})) [:a 1] 1)))
+  (is (== -1 (.indexOf (seq (bean #js {:a #js {:b 2}} :recursive true)) [:a {:b 2}] 1)))
   (is (zero? (.indexOf (seq (bean #js {:a 1} :keywordize-keys false)) ["a" 1])))
   (is (zero? (.indexOf (seq (bean #js {:a 1} :keywordize-keys false)) ["a" 1] 0)))
   (is (== -1 (.indexOf (seq (bean #js {:a 1} :keywordize-keys false)) ["a" 2])))
@@ -959,6 +960,28 @@
   (is (.equiv (seq (->clj #js [#js []])) [[]]))
   (is (.equiv (seq (->clj #js [#js [1]])) [[1]]))
   (is (.equiv (seq (->clj #js [#js {:a 1}])) [{:a 1}])))
+
+(deftest vec-seq-dot-indexOf-test
+  (is (zero? (.indexOf (seq (->clj #js [0])) 0)))
+  (is (zero? (.indexOf (seq (->clj #js [0])) 0 0)))
+  (is (== -1 (.indexOf (seq (->clj #js [0])) 1)))
+  (is (== -1 (.indexOf (seq (->clj #js [0])) 1 1)))
+  (is (zero? (.indexOf (seq (->clj #js [#js {:a 1}])) {:a 1})))
+  (is (zero? (.indexOf (seq (->clj #js [#js {:a 1}])) {:a 1} 0)))
+  (is (== -1 (.indexOf (seq (->clj #js [#js {:a 1}])) {:a 2})))
+  (is (== -1 (.indexOf (seq (->clj #js [#js {:a 1}])) {:a 2} 1)))
+  (is (== -1 (.indexOf (seq (->clj #js [#js {:a 1}])) {:a 1} 1))))
+
+(deftest vec-seq-dot-lastIndexOf-test
+  (is (zero? (.lastIndexOf (seq (->clj #js [0])) 0)))
+  (is (zero? (.lastIndexOf (seq (->clj #js [0])) 0 1)))
+  (is (== -1 (.lastIndexOf (seq (->clj #js [0])) 1)))
+  (is (== -1 (.lastIndexOf (seq (->clj #js [0])) 1 1)))
+  (is (zero? (.lastIndexOf (seq (->clj #js [#js {:a 1}])) {:a 1})))
+  (is (zero? (.lastIndexOf (seq (->clj #js [#js {:a 1}])) {:a 1} 0)))
+  (is (== -1 (.lastIndexOf (seq (->clj #js [#js {:a 1}])) {:a 2})))
+  (is (== -1 (.lastIndexOf (seq (->clj #js [#js {:a 1}])) {:a 2} 1)))
+  (is (zero? (.lastIndexOf (seq (->clj #js [#js {:a 1}])) {:a 1} 1))))
 
 (deftest ->clj-test
   (is (nil? (->clj nil)))
