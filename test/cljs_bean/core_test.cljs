@@ -19,6 +19,26 @@
 (defn recursive-bean? [x]
   (and (bean? x) (.-recursive? x)))
 
+(defn js?
+  "Returns true if x is recursively purely a JavaScript value."
+  [x]
+  (cond
+    (nil? x) true
+    (boolean? x) true
+    (string? x) true
+    (number? x) true
+    (fn? x) true
+    (array? x) (every? js? x)
+    (object? x) (every? js? (map #(gobj/get x %) (js-keys x)))))
+
+(defn js-able?
+  "Returns true for objects produced by this lib that can be converted to JavaScript in constant time."
+  [x]
+  (cond
+    (bean? x) (js? (object x))
+    (instance? @#'cljs-bean.core/ArrayVector x) (js? (.-arr x))
+    :else false))
+
 (defn prop->key [prop]
   (cond-> prop
     (some? (re-matches #"[A-Za-z_\*\+\?!\-'][\w\*\+\?!\-']*" prop)) keyword))
@@ -327,8 +347,8 @@
     (is (map? m))
     (is (not (bean? m)))
     (is (= {"x" 1 :y 2} m)))
-  (is (object? (let [o (object (assoc (bean #js {} :recursive true) :a (bean #js {:b 2})))]
-                 (gobj/get o "a")))))
+  (is (js-able? (assoc (bean #js {} :recursive true) :a (bean #js {:b 2}))))
+  (is (not (js-able? (assoc (bean #js {} :recursive true) :a {:b 2})))))
 
 (deftest contains?-test
   (let [b (bean color-black)]
@@ -704,8 +724,8 @@
   (is (= {:a 1} (persistent! (assoc! (transient (bean)) :a 1))))
   (is (= {:a 1} (persistent! (assoc! (transient (bean #js {} :recursive true)) :a 1))))
   (is (= {:a {:b 2}} (persistent! (assoc! (transient (bean #js {} :recursive true)) :a (bean #js {:b 2})))))
-  (is (object? (let [o (object (persistent! (assoc! (transient (bean #js {} :recursive true)) :a (bean #js {:b 2}))))]
-                 (gobj/get o "a"))))
+  (is (js-able? (persistent! (assoc! (transient (bean #js {} :recursive true)) :a (bean #js {:b 2})))))
+  (is (not (js-able? (persistent! (assoc! (transient (bean #js {} :recursive true)) :a {:b 2})))))
   (is (= {:a 1, :b 2} (persistent! (assoc! (transient (bean)) :a 1 :b 2))))
   (is (= {"a" 1} (persistent! (assoc! (transient (bean)) "a" 1))))
   (is (not (bean? (persistent! (assoc! (transient (bean)) "a" 1)))))
