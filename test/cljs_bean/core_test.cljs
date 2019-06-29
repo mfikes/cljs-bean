@@ -884,6 +884,12 @@
   (is (thrown-with-msg? js/Error #"Index 2 out of bounds  \[0,1\]" (assoc (->clj #js [0]) 2 1)))
   (is (thrown-with-msg? js/Error #"Vector's key for assoc must be a number." (assoc (->clj #js [0]) :k 1))))
 
+(deftest vec-contains-key-test
+  (is (true? (-contains-key? (->clj #js [1]) 0)))
+  (is (false? (-contains-key? (->clj #js [1]) -1)))
+  (is (false? (-contains-key? (->clj #js [1]) -1)))
+  (is (false? (-contains-key? (->clj #js [1]) :k))))
+
 (deftest ->clj-test
   (is (nil? (->clj nil)))
   (is (true? (->clj true)))
