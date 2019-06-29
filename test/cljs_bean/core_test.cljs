@@ -928,14 +928,6 @@
   (is (== 19 ((->clj #js [0]) 12 19)))
   (is (== 0 ((->clj #js [0]) 0 11))))
 
-(deftest vec-transient-test
-  (is (= [1] (persistent! (transient (->clj #js [1])))))
-  (let [t (transient (->clj #js []))]
-    (persistent! t)
-    (is (thrown-with-msg? js/Error #"persistent! called twice" (persistent! t))))
-  (is (= [0 1 2] (into (->clj #js []) (range 3))))
-  (is (= [17 0 1 2] (into (->clj #js [17]) (range 3)))))
-
 (deftest vec-reverse-test
   (is (reversible? (->clj #js [17])))
   (is (= [3 2 1] (reverse (->clj #js [1 2 3]))))
@@ -1072,6 +1064,22 @@
 (deftest vec-keywordize-keys-false
   (is (= {"a" 1, "b" [{"c" 2}]}
         (bean #js {:a 1 :b #js [#js {:c 2}]} :recursive true :keywordize-keys false))))
+
+(deftest vec-transient-test
+  (is (= [1] (persistent! (transient (->clj #js [1])))))
+  (let [t (transient (->clj #js []))]
+    (persistent! t)
+    (is (thrown-with-msg? js/Error #"persistent! called twice" (persistent! t))))
+  (is (= [0 1 2] (into (->clj #js []) (range 3))))
+  (is (= [17 0 1 2] (into (->clj #js [17]) (range 3)))))
+
+(deftest vec-transient-count-test
+  (is (counted? (transient (->clj #js []))))
+  (is (== 0 (count (transient (->clj #js [])))))
+  (is (== 1 (count (transient (->clj #js [1])))))
+  (is (== 2 (count (transient (->clj #js [1 2])))))
+  (is (== 1 (count (assoc! (transient (->clj #js [])) 0 1))))
+  (is (== 1 (count (persistent! (-> (transient (->clj #js [])) (assoc! 0 1)))))))
 
 (deftest ->clj-test
   (is (nil? (->clj nil)))
