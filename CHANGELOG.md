@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file. This change
 - Support for `IIterable` ([#32](https://github.com/mfikes/cljs-bean/issues/32))
 
 ### Changed
+- Re-licence under EPL ([#47](https://github.com/mfikes/cljs-bean/issues/47))
 - Type hint return type of `object` ([#31](https://github.com/mfikes/cljs-bean/issues/31))
 - Cache `js-keys` ([#36](https://github.com/mfikes/cljs-bean/issues/36))
 - Remove unnecessary declares for `bean?` and `object` ([#43](https://github.com/mfikes/cljs-bean/issues/43))
