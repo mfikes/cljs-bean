@@ -1059,6 +1059,10 @@
               0
               (seq (bean #js [1 2]))))))
 
+(deftest vec-seq-hash-test
+  (is (== (hash (seq [1])) (hash (seq (->clj #js [1])))))
+  (is (== (hash (seq [:a {:b 2}])) (hash (seq (->clj #js [:a #js {:b 2}]))))))
+
 (deftest ->clj-test
   (is (nil? (->clj nil)))
   (is (true? (->clj true)))
