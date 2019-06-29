@@ -43,6 +43,22 @@
              (recur (dec idx)))
            -1))))))
 
+(defn- compare-indexed
+  "Compare indexed collection."
+  ([xs ys]
+   (let [xl (count xs)
+         yl (count ys)]
+     (cond
+       (< xl yl) -1
+       (> xl yl) 1
+       (== xl 0) 0
+       :else (compare-indexed xs ys xl 0))))
+  ([xs ys len n]
+   (let [d (compare (nth xs n) (nth ys n))]
+     (if (and (zero? d) (< (+ n 1) len))
+       (recur xs ys len (inc n))
+       d))))
+
 (defn- ->val [x prop->key key->prop]
   (cond
     (number? x) x
@@ -829,6 +845,12 @@
   IIterable
   (-iterator [_]
     (ArrayVectorIterator. prop->key key->prop arr 0 (alength arr)))
+
+  IComparable
+  (-compare [x y]
+    (if (vector? y)
+      (compare-indexed x y)
+      (throw (js/Error. (str "Cannot compare " x " to " y)))))
 
   IPrintWithWriter
   (-pr-writer [coll writer opts]

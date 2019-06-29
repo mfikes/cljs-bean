@@ -969,6 +969,10 @@
   (is (= [2 3 4] (subvec (->clj #js [1 2 3 4]) 1)))
   (is (= [17 2 3] (into [17] (subvec (->clj #js [1 2 3]) 1)))))
 
+(deftest vec-compare-test
+  (is (satisfies? IComparable (->clj #js [17 2])))
+  (is (= [[3 3] [17 2]] (sort [(->clj #js [17 2]) (->clj #js [3 3])]))))
+
 (deftest vec-iter-test
   (is (iterable? (->clj #js [1])))
   (is (some? (iter (->clj #js [1]))))
