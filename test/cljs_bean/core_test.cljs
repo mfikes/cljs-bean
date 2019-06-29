@@ -893,6 +893,12 @@
   (is (false? (-contains-key? (->clj #js [1]) -1)))
   (is (false? (-contains-key? (->clj #js [1]) :k))))
 
+(deftest vec-find-test
+  (is (= [0 :x] (find (->clj #js [:x]) 0)))
+  (is (nil? (find (->clj #js [:x]) 1)))
+  (is (map-entry? (find (->clj #js [:x]) 0)))
+  (is (= [0 {:a 1}] (find (->clj #js [#js {:a 1}]) 0))))
+
 (deftest ->clj-test
   (is (nil? (->clj nil)))
   (is (true? (->clj true)))
