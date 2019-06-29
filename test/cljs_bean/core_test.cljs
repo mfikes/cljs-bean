@@ -917,6 +917,13 @@
   (is (== 17 (reduce-kv (constantly (reduced 17)) []
                (->clj #js [1 2 3])))))
 
+(deftest vec-invoke-test
+  (is (== 0 ((->clj #js [0]) 0)))
+  (is (thrown-with-msg? js/Error #"No item 12 in vector of length 1"
+        ((->clj #js [0]) 12)))
+  (is (== 19 ((->clj #js [0]) 12 19)))
+  (is (== 0 ((->clj #js [0]) 0 11))))
+
 (deftest ->clj-test
   (is (nil? (->clj nil)))
   (is (true? (->clj true)))
