@@ -13,3 +13,10 @@ Beans can be made to behave more like `js->clj` by supplying `:recursive` `true`
 (bean #js {:a 1, :obj #js {:x 13, :y 17} :vec #js [1 2 3]} :recursive true)
 ;; => {:a 1, :obj {:x 13, :y 17} :vec [1 2 3]}
 ```
+
+The `->clj` converter, when applied to JavaScript objects, automatically supplies `:recursive true`, so the above can be simplified to
+
+```clojure
+(->clj #js {:a 1, :obj #js {:x 13, :y 17} :vec #js [1 2 3]})
+;; => {:a 1, :obj {:x 13, :y 17} :vec [1 2 3]}
+```

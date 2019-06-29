@@ -18,7 +18,8 @@ can be used to extract the wrapped JavaScript object from the bean:
 ;; => #js {:a 1, :b 2}
 ```
 
-This enables flexible and efficient ways to create JavaScript objects using Clojure idioms, without having to reach for `clj->js`.
+This enables flexible and efficient ways to create JavaScript objects
+using Clojure idioms, without having to reach for `clj->js`.
 
 For example, the following builds a JavaScript object, setting its property values:
 
@@ -41,4 +42,23 @@ added to a bean configured to keywordize keys:
 
 (bean? *1)
 ;; => false
+```
+
+The `->js` converter will automatically check and employ the fast-path 
+constant time conversion where possible, falling back to `clj->js` if not.
+
+Since `->clj` and `->js` are recursive, they can be used as simplified 
+drop-in replacements for `js->clj` and `clj->js`, taking the fast path 
+where possible.
+
+In the following example, a thin wrapper produced by `->clj` allows the
+use of `update-in` to produce a new JavaScript object, which is accessed
+via `->js`:
+
+```clojure
+(require '[cljs-bean.core :refer [->clj ->js]])
+
+(let [o #js {:a #js {:b 1}}]
+  (-> o ->clj (update-in [:a :b] inc) ->js))
+ ;; #js {:a #js {:b 2}}
 ```
