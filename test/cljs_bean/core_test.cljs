@@ -1081,6 +1081,14 @@
   (is (== 1 (count (assoc! (transient (->clj #js [])) 0 1))))
   (is (== 1 (count (persistent! (-> (transient (->clj #js [])) (assoc! 0 1)))))))
 
+(deftest vec-assoc!-test
+  (is (= [1] (persistent! (assoc! (transient (->clj #js [])) 0 1))))
+  (is (= [1] (persistent! (assoc! (transient (->clj #js [7])) 0 1))))
+  (is (= [1 2] (persistent! (assoc! (transient (->clj #js [1])) 1 2))))
+  (is (= [1 {:a 1}] (persistent! (assoc! (transient (->clj #js [1])) 1 (bean #js {:a 1})))))
+  (let [t (doto (assoc! (transient (->clj #js [])) 0 1) persistent!)]
+    (is (thrown-with-msg? js/Error #"assoc! after persistent!" (assoc! t 0 1)))))
+
 (deftest ->clj-test
   (is (nil? (->clj nil)))
   (is (true? (->clj true)))
