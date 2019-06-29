@@ -6,7 +6,8 @@
     [clojure.test.check.generators :as gen]
     [clojure.test.check.properties :as prop :include-macros true]
     [cljs-bean.core :refer [bean bean? object ->clj ->js]]
-    [clojure.walk :as walk]))
+    [clojure.walk :as walk]
+    [goog.object :as gobj]))
 
 (def simple-type-printable-no-nan
   (gen/one-of [gen/int gen/large-integer (gen/double* {:NaN? false}) gen/char-ascii gen/string-ascii gen/boolean
@@ -325,7 +326,9 @@
         m (assoc b :y 2)]
     (is (map? m))
     (is (not (bean? m)))
-    (is (= {"x" 1 :y 2} m))))
+    (is (= {"x" 1 :y 2} m)))
+  (is (object? (let [o (object (assoc (bean #js {} :recursive true) :a (bean #js {:b 2})))]
+                 (gobj/get o "a")))))
 
 (deftest contains?-test
   (let [b (bean color-black)]
@@ -701,6 +704,8 @@
   (is (= {:a 1} (persistent! (assoc! (transient (bean)) :a 1))))
   (is (= {:a 1} (persistent! (assoc! (transient (bean #js {} :recursive true)) :a 1))))
   (is (= {:a {:b 2}} (persistent! (assoc! (transient (bean #js {} :recursive true)) :a (bean #js {:b 2})))))
+  (is (object? (let [o (object (persistent! (assoc! (transient (bean #js {} :recursive true)) :a (bean #js {:b 2}))))]
+                 (gobj/get o "a"))))
   (is (= {:a 1, :b 2} (persistent! (assoc! (transient (bean)) :a 1 :b 2))))
   (is (= {"a" 1} (persistent! (assoc! (transient (bean)) "a" 1))))
   (is (not (bean? (persistent! (assoc! (transient (bean)) "a" 1)))))

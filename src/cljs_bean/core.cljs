@@ -133,7 +133,7 @@
         (do
           (unchecked-set obj (key->prop k)
             (cond-> v
-              (and recursive? (recursive-bean? v)) object
+              (and recursive? (bean? v)) object
               (and recursive? (instance? ArrayVector v)) .-arr))
           (set! __cnt nil)
           tcoll)
@@ -354,7 +354,7 @@
         (doto (gobj/clone obj) (unchecked-set (key->prop k)
                                  ;; TODO short circuit this
                                  (cond-> v
-                                   (and recursive? (recursive-bean? v)) object
+                                   (and recursive? (bean? v)) object
                                    (and recursive? (instance? ArrayVector v)) .-arr)))
         prop->key key->prop recursive? nil nil nil)
       (-assoc (with-meta (snapshot obj prop->key key->prop recursive?) meta) k v)))
