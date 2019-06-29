@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file. This change
 
 ## [Unreleased]
 ### Added
+- Recursive beans ([#46](https://github.com/mfikes/cljs-bean/issues/46))
 - Support for `IIterable` ([#32](https://github.com/mfikes/cljs-bean/issues/32))
 
 ### Changed
