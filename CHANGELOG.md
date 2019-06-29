@@ -1,7 +1,7 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
-## [Unreleased]
+## [1.1.0] - 2019-06-29
 ### Added
 - Recursive beans ([#46](https://github.com/mfikes/cljs-bean/issues/46))
 - Support for `IIterable` ([#32](https://github.com/mfikes/cljs-bean/issues/32))
@@ -53,7 +53,7 @@ All notable changes to this project will be documented in this file. This change
 ### Added
 - Initial release.
 
-[Unreleased]: https://github.com/mfikes/cljs-bean/compare/1.0.0...HEAD
+[1.1.0]: https://github.com/mfikes/cljs-bean/compare/1.0.0...HEAD
 [1.0.0]: https://github.com/mfikes/cljs-bean/compare/0.6.0...1.0.0
 [0.6.0]: https://github.com/mfikes/cljs-bean/compare/0.5.0...0.6.0
 [0.5.0]: https://github.com/mfikes/cljs-bean/compare/0.4.0...0.5.0
