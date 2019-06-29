@@ -878,6 +878,12 @@
   (is (== 0 (get (->clj #js [0]) 0 17)))
   (is (== 17 (get (->clj #js [0]) 1 17))))
 
+(deftest vec-assoc-test
+  (is (= [1] (assoc (->clj #js [0]) 0 1)))
+  (is (= [0 1] (assoc (->clj #js [0]) 1 1)))
+  (is (thrown-with-msg? js/Error #"Index 2 out of bounds  \[0,1\]" (assoc (->clj #js [0]) 2 1)))
+  (is (thrown-with-msg? js/Error #"Vector's key for assoc must be a number." (assoc (->clj #js [0]) :k 1))))
+
 (deftest ->clj-test
   (is (nil? (->clj nil)))
   (is (true? (->clj true)))
