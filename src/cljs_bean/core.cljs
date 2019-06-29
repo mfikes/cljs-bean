@@ -191,9 +191,7 @@
   (-clone [_] (BeanSeq. obj prop->key key->prop recursive? arr i meta))
 
   ISeqable
-  (-seq [this]
-    (when (< i (alength arr))
-      this))
+  (-seq [this] this)
 
   IMeta
   (-meta [_] meta)
@@ -545,9 +543,7 @@
   (-clone [_] (ArrayVectorSeq. prop->key key->prop arr i meta))
 
   ISeqable
-  (-seq [this]
-    (when (< i (alength arr))
-      this))
+  (-seq [this] this)
 
   IMeta
   (-meta [_] meta)
