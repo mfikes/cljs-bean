@@ -542,6 +542,10 @@
   (let [s (seq (bean #js {:a 1} :keywordize-keys false))]
     (= {:foo true} (meta (with-meta s {:foo true})))))
 
+(deftest seq-seq-test
+  (is (seqable? (seq (bean #js {:a 1}))))
+  (is (= [[:a 1]] (seq (seq (bean #js {:a 1}))))))
+
 (deftest seq-count-test
   (is (counted? (seq (bean #js {:a 1}))))
   (is (== 0 (count (seq (bean #js {})))))
@@ -1006,6 +1010,10 @@
     (is (== 2 (count (with-meta s {:foo true})))))
   (let [m {:x 1}]
     (is (nil? (meta (conj (with-meta (seq (->clj #js [1 2])) m) 3))))))
+
+(deftest vec-seq-seq-test
+  (is (seqable? (seq (->clj #js [1]))))
+  (is (= [1] (seq (seq (->clj #js [1]))))))
 
 (deftest ->clj-test
   (is (nil? (->clj nil)))
