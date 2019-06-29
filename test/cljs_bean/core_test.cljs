@@ -1097,6 +1097,17 @@
   (let [t (doto (conj! (transient (->clj #js [])) 1) persistent!)]
     (is (thrown-with-msg? js/Error #"conj! after persistent!" (conj! t 1)))))
 
+(deftest vec-transient-lookup-test
+  (is (== 1 (get (assoc! (transient (->clj #js [])) 0 1) 0)))
+  (let [t (assoc! (transient (->clj #js [])) 0 1)]
+    (persistent! t)
+    (is (thrown-with-msg? js/Error #"nth after persistent!" (get t 0))))
+  (is (= :not-found (-lookup (assoc! (transient (->clj #js [])) 0 1) 17 :not-found)))
+  ;; See CLJS-3124
+  #_(let [t (assoc! (transient (->clj #js [])) 0 1)]
+    (persistent! t)
+    (is (thrown-with-msg? js/Error #"nth after persistent!" (-lookup t 17 :not-found)))))
+
 (deftest ->clj-test
   (is (nil? (->clj nil)))
   (is (true? (->clj true)))
