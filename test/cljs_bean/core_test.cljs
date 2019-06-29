@@ -926,6 +926,9 @@
 
 (deftest vec-transient-test
   (is (= [1] (persistent! (transient (->clj #js [1])))))
+  (let [t (transient (->clj #js []))]
+    (persistent! t)
+    (is (thrown-with-msg? js/Error #"persistent! called twice" (persistent! t))))
   (is (= [0 1 2] (into (->clj #js []) (range 3))))
   (is (= [17 0 1 2] (into (->clj #js [17]) (range 3)))))
 
