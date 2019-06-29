@@ -1021,6 +1021,12 @@
   (is (counted? (rest (seq (->clj #js [1 2])))))
   (is (== 1 (count (rest (seq (->clj #js [1 2])))))))
 
+(deftest vec-seq-nth-test
+  (is (= 1 (nth (seq (->clj #js [1 2])) 0)))
+  (is (= {:a 1} (nth (seq (->clj #js [#js {:a 1} 2])) 0)))
+  (is (thrown-with-msg? js/Error #"Index out of bounds" (nth (seq (->clj #js [1])) 1)))
+  (is (= ::not-found (nth (seq (->clj #js [1])) 1 ::not-found))))
+
 (deftest ->clj-test
   (is (nil? (->clj nil)))
   (is (true? (->clj true)))
