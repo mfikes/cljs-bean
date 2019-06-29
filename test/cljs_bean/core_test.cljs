@@ -899,6 +899,17 @@
   (is (map-entry? (find (->clj #js [:x]) 0)))
   (is (= [0 {:a 1}] (find (->clj #js [#js {:a 1}]) 0))))
 
+(deftest vec-reduce-test
+  (is (== 0 (reduce + (->clj #js []))))
+  (is (== 1 (reduce + (->clj #js [1]))))
+  (is (== 3 (reduce + (->clj #js [1 2]))))
+  (is (== 6 (reduce + (->clj #js [1 2 3]))))
+  (is (== 17 (reduce (constantly (reduced 17)) (->clj #js [1 2 3]))))
+  (is (== 30 (reduce + 30 (->clj #js []))))
+  (is (== 31 (reduce + 30 (->clj #js [1]))))
+  (is (== 33 (reduce + 30 (->clj #js [1 2]))))
+  (is (== 36 (reduce + 30 (->clj #js [1 2 3])))))
+
 (deftest ->clj-test
   (is (nil? (->clj nil)))
   (is (true? (->clj true)))
