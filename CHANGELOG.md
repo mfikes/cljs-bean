@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## [Unreleased]
+### Changed
+- Separate out copied code ([#53](https://github.com/mfikes/cljs-bean/issues/53))
+
 ## [1.1.0] - 2019-06-29
 ### Added
 - Recursive beans ([#46](https://github.com/mfikes/cljs-bean/issues/46))

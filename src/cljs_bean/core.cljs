@@ -1,5 +1,6 @@
 (ns cljs-bean.core
   (:require
+   [cljs-bean.from.cljs.core :as core]
    [goog.object :as gobj]))
 
 (declare Bean)
@@ -8,56 +9,6 @@
 (declare object)
 
 (def ^:private lookup-sentinel #js {})
-
-(defn- -indexOf
-  ([coll x]
-   (-indexOf coll x 0))
-  ([coll x start]
-   (let [len (count coll)]
-     (if (>= start len)
-       -1
-       (loop [idx (cond
-                    (pos? start) start
-                    (neg? start) (max 0 (+ start len))
-                    :else start)]
-         (if (< idx len)
-           (if (= (nth coll idx) x)
-             idx
-             (recur (inc idx)))
-           -1))))))
-
-(defn- -lastIndexOf
-  ([coll x]
-   (-lastIndexOf coll x (count coll)))
-  ([coll x start]
-   (let [len (count coll)]
-     (if (zero? len)
-       -1
-       (loop [idx (cond
-                    (pos? start) (min (dec len) start)
-                    (neg? start) (+ len start)
-                    :else start)]
-         (if (>= idx 0)
-           (if (= (nth coll idx) x)
-             idx
-             (recur (dec idx)))
-           -1))))))
-
-(defn- compare-indexed
-  "Compare indexed collection."
-  ([xs ys]
-   (let [xl (count xs)
-         yl (count ys)]
-     (cond
-       (< xl yl) -1
-       (> xl yl) 1
-       (== xl 0) 0
-       :else (compare-indexed xs ys xl 0))))
-  ([xs ys len n]
-   (let [d (compare (nth xs n) (nth ys n))]
-     (if (and (zero? d) (< (+ n 1) len))
-       (recur xs ys len (inc n))
-       d))))
 
 (defn- ->val [x prop->key key->prop]
   (cond
@@ -118,21 +69,7 @@
 
   ITransientCollection
   (-conj! [tcoll o]
-    (if editable?
-      (cond
-        (map-entry? o)
-        (-assoc! tcoll (key o) (val o))
-
-        (vector? o)
-        (-assoc! tcoll (o 0) (o 1))
-
-        :else
-        (loop [es (seq o) tcoll tcoll]
-          (if-let [e (first es)]
-            (recur (next es)
-              (-assoc! tcoll (key e) (val e)))
-            tcoll)))
-      (throw (js/Error. "conj! after persistent!"))))
+    (core/TransientArrayMap-conj! tcoll o editable?))
 
   (-persistent! [tcoll]
     (if editable?
@@ -197,13 +134,13 @@
   (equiv [this other]
     (-equiv this other))
   (indexOf [coll x]
-    (-indexOf coll x 0))
+    (core/-indexOf coll x 0))
   (indexOf [coll x start]
-    (-indexOf coll x start))
+    (core/-indexOf coll x start))
   (lastIndexOf [coll x]
-    (-lastIndexOf coll x (count coll)))
+    (core/-lastIndexOf coll x (count coll)))
   (lastIndexOf [coll x start]
-    (-lastIndexOf coll x start))
+    (core/-lastIndexOf coll x start))
 
   ICloneable
   (-clone [_] (BeanSeq. obj prop->key key->prop recursive? arr i meta))
@@ -250,15 +187,7 @@
   ISequential
   IEquiv
   (-equiv [coll other]
-    (boolean
-      (when (sequential? other)
-        (if (and (counted? other) (not (== (-count coll) (-count other))))
-          false
-          (loop [xs (-seq coll) ys (seq other)]
-            (cond (nil? xs) (nil? ys)
-                  (nil? ys) false
-                  (= (first xs) (first ys)) (recur (next xs) (next ys))
-                  :else false))))))
+    (core/equiv-sequential coll other))
 
   ICollection
   (-conj [coll o] (cons o coll))
@@ -268,23 +197,9 @@
 
   IReduce
   (-reduce [coll f]
-    (let [cnt (-count coll)]
-      (loop [val (indexed-entry obj prop->key key->prop recursive? arr i), n (inc i)]
-        (if (< n cnt)
-          (let [nval (f val (-nth coll n))]
-            (if (reduced? nval)
-              @nval
-              (recur nval (inc n))))
-          val))))
+    (core/ci-reduce coll f))
   (-reduce [coll f start]
-    (let [cnt (-count coll)]
-      (loop [val start, n i]
-        (if (< n cnt)
-          (let [nval (f val (-nth coll n))]
-            (if (reduced? nval)
-              @nval
-              (recur nval (inc n))))
-          val))))
+    (core/ci-reduce coll f start))
 
   IHash
   (-hash [coll] (hash-ordered-coll coll))
@@ -329,15 +244,7 @@
 
   ICollection
   (-conj [coll entry]
-    (if (vector? entry)
-      (-assoc coll (entry 0) (entry 1))
-      (loop [ret coll es (seq entry)]
-        (if (nil? es)
-          ret
-          (let [e (first es)]
-            (if (vector? e)
-              (recur (-assoc ret (e 0) (e 1)) (next es))
-              (throw (js/Error. "conj on a map takes map entries or seqables of map entries"))))))))
+    (core/PersistentArrayMap-conj coll entry))
 
   IEmptyableCollection
   (-empty [_] (Bean. meta #js {} prop->key key->prop recursive? #js []  0 nil))
@@ -471,9 +378,7 @@
 
   ITransientAssociative
   (-assoc! [tcoll key val]
-    (if (number? key)
-      (-assoc-n! tcoll key val)
-      (throw (js/Error. "TransientVector's key for assoc! must be a number."))))
+    (core/TransientVector-assoc! tcoll key val "TransientArrayVector"))
 
   ITransientVector
   (-assoc-n! [tcoll n val]
@@ -549,13 +454,13 @@
   (equiv [this other]
     (-equiv this other))
   (indexOf [coll x]
-    (-indexOf coll x 0))
+    (core/-indexOf coll x 0))
   (indexOf [coll x start]
-    (-indexOf coll x start))
+    (core/-indexOf coll x start))
   (lastIndexOf [coll x]
-    (-lastIndexOf coll x (count coll)))
+    (core/-lastIndexOf coll x (count coll)))
   (lastIndexOf [coll x start]
-    (-lastIndexOf coll x start))
+    (core/-lastIndexOf coll x start))
 
   ICloneable
   (-clone [_] (ArrayVectorSeq. prop->key key->prop arr i meta))
@@ -602,15 +507,7 @@
   ISequential
   IEquiv
   (-equiv [coll other]
-    (boolean
-      (when (sequential? other)
-        (if (and (counted? other) (not (== (-count coll) (-count other))))
-          false
-          (loop [xs (-seq coll) ys (seq other)]
-            (cond (nil? xs) (nil? ys)
-                  (nil? ys) false
-                  (= (first xs) (first ys)) (recur (next xs) (next ys))
-                  :else false))))))
+    (core/equiv-sequential coll other))
 
   ICollection
   (-conj [coll o] (cons o coll))
@@ -620,23 +517,9 @@
 
   IReduce
   (-reduce [coll f]
-    (let [cnt (alength arr)]
-      (loop [val (->val (aget arr i) prop->key key->prop), n (inc i)]
-        (if (< n cnt)
-          (let [nval (f val (->val (aget arr n) prop->key key->prop))]
-            (if (reduced? nval)
-              @nval
-              (recur nval (inc n))))
-          val))))
+    (core/ci-reduce coll f))
   (-reduce [coll f start]
-    (let [cnt (alength arr)]
-      (loop [val start, n i]
-        (if (< n cnt)
-          (let [nval (f val (->val (aget arr n) prop->key key->prop))]
-            (if (reduced? nval)
-              @nval
-              (recur nval (inc n))))
-          val))))
+    (core/ci-reduce coll f start))
 
   IHash
   (-hash [coll] (hash-ordered-coll coll))
@@ -652,13 +535,13 @@
   (equiv [this other]
     (-equiv this other))
   (indexOf [coll x]
-    (-indexOf coll x 0))
+    (core/-indexOf coll x 0))
   (indexOf [coll x start]
-    (-indexOf coll x start))
+    (core/-indexOf coll x start))
   (lastIndexOf [coll x]
-    (-lastIndexOf coll x))
+    (core/-lastIndexOf coll x))
   (lastIndexOf [coll x start]
-    (-lastIndexOf coll x start))
+    (core/-lastIndexOf coll x start))
 
   ICloneable
   (-clone [_] (ArrayVector. meta prop->key key->prop arr __hash))
@@ -703,20 +586,7 @@
   ISequential
   IEquiv
   (-equiv [coll other]
-    (if (instance? ArrayVector other)
-      (if (== (alength arr) (count other))
-        (let [me-iter  (-iterator coll)
-              you-iter (-iterator other)]
-          (loop []
-            (if ^boolean (.hasNext me-iter)
-              (let [x (.next me-iter)
-                    y (.next you-iter)]
-                (if (= x y)
-                  (recur)
-                  false))
-              true)))
-        false)
-      (equiv-sequential coll other)))
+    (core/PersistentVector-equiv coll other ArrayVector (alength arr)))
 
   IHash
   (-hash [coll] (caching-hash coll hash-ordered-coll __hash))
@@ -741,19 +611,13 @@
 
   ILookup
   (-lookup [coll k] (-lookup coll k nil))
-  (-lookup [coll k not-found] (if (number? k)
-                                (-nth coll k not-found)
-                                not-found))
+  (-lookup [coll k not-found] (core/PersistentVector-lookup coll k not-found))
 
   IAssociative
   (-assoc [coll k v]
-    (if (number? k)
-      (-assoc-n coll k v)
-      (throw (js/Error. "Vector's key for assoc must be a number."))))
+    (core/PersistentVector-assoc coll k v))
   (-contains-key? [coll k]
-    (if (integer? k)
-      (and (<= 0 k) (< k (alength arr)))
-      false))
+    (core/PersistentVector-contains-key? coll k (alength arr)))
 
   IFind
   (-find [coll n]
@@ -777,41 +641,14 @@
 
   IReduce
   (-reduce [v f]
-    (if (zero? (alength arr))
-      (f)
-      (loop [i 1 init (-nth v 0)]
-        (if (< i (alength arr))
-          (let [len  (alength arr)
-                init (loop [j 1 init init]
-                       (if (< j len)
-                         (let [init (f init (->val (aget arr j) prop->key key->prop))]
-                           (if (reduced? init)
-                             init
-                             (recur (inc j) init)))
-                         init))]
-            (if (reduced? init)
-              @init
-              (recur (+ i len) init)))
-          init))))
-  (-reduce [_ f init]
-    (loop [i 0 init init]
-      (if (< i (alength arr))
-        (let [len  (alength arr)
-              init (loop [j 0 init init]
-                     (if (< j len)
-                       (let [init (f init (->val (aget arr j) prop->key key->prop))]
-                         (if (reduced? init)
-                           init
-                           (recur (inc j) init)))
-                       init))]
-          (if (reduced? init)
-            @init
-            (recur (+ i len) init)))
-        init)))
+    (core/ci-reduce v f))
+  (-reduce [v f init]
+    (core/ci-reduce v f init))
 
 
   IKVReduce
   (-kv-reduce [v f init]
+    ;; Derived from PersistentVector -kv-reduce
     (loop [i 0 init init]
       (if (< i (alength arr))
         (let [len  (alength arr)
@@ -849,7 +686,7 @@
   IComparable
   (-compare [x y]
     (if (vector? y)
-      (compare-indexed x y)
+      (core/compare-indexed x y)
       (throw (js/Error. (str "Cannot compare " x " to " y)))))
 
   IPrintWithWriter

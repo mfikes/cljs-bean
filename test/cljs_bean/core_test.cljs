@@ -6,6 +6,7 @@
     [clojure.test.check.generators :as gen]
     [clojure.test.check.properties :as prop :include-macros true]
     [cljs-bean.core :refer [bean bean? object ->clj ->js]]
+    [cljs-bean.from.cljs.core-test :as core-test]
     [clojure.walk :as walk]
     [goog.object :as gobj]))
 
@@ -621,42 +622,18 @@
   (is (== (hash (seq {:a {:b 2}})) (hash (seq (bean #js {:a #js {:b 2}} :recursive true)))))
   (is (== (hash (seq {"a" 1})) (hash (seq (bean #js {:a 1} :keywordize-keys false))))))
 
-(defn seq-iter-match
-  [coll]
-  (let [i (-iterator coll)]
-    (loop [s (seq coll)
-           n 0]
-      (if (seq s)
-        (do
-          (when-not (.hasNext i)
-            (throw
-              (js/Error.
-                (str  "Iterator exhausted before seq at(" n ")" ))))
-          (let [iv (.next i)
-                sv (first s)]
-            (when-not (= iv sv)
-              (throw
-                (js/Error.
-                  (str "Iterator value " iv " and seq value " sv " did not match at ( "  n ")")))))
-          (recur (rest s) (inc n)))
-        (if (.hasNext i)
-          (throw
-            (js/Error.
-              (str  "Seq exhausted before iterator at (" n ")")))
-          true)))))
-
 (deftest coll-iter-seq-match
-  (is (seq-iter-match (bean)))
-  (is (seq-iter-match (bean #js {:a 1})))
-  (is (seq-iter-match (bean #js {:a #js {:b 2}} :recursive true)))
-  (is (seq-iter-match (bean #js {:a 1, :b 2})))
-  (is (seq-iter-match (bean #js {:a 1, :b #js {:c 3}} :recursive true)))
-  (is (seq-iter-match (bean #js {} :keywordize-keys false)))
-  (is (seq-iter-match (bean #js {:a 1} :keywordize-keys false)))
-  (is (seq-iter-match (bean #js {:a 1, :b 2} :keywordize-keys false)))
-  (is (seq-iter-match (bean #js {} :prop->key prop->key :key->prop key->prop)))
-  (is (seq-iter-match (bean #js {:a 1} :prop->key prop->key :key->prop key->prop)))
-  (is (seq-iter-match (bean #js {:a 1, :b 2} :prop->key prop->key :key->prop key->prop))))
+  (is (core-test/seq-iter-match (bean)))
+  (is (core-test/seq-iter-match (bean #js {:a 1})))
+  (is (core-test/seq-iter-match (bean #js {:a #js {:b 2}} :recursive true)))
+  (is (core-test/seq-iter-match (bean #js {:a 1, :b 2})))
+  (is (core-test/seq-iter-match (bean #js {:a 1, :b #js {:c 3}} :recursive true)))
+  (is (core-test/seq-iter-match (bean #js {} :keywordize-keys false)))
+  (is (core-test/seq-iter-match (bean #js {:a 1} :keywordize-keys false)))
+  (is (core-test/seq-iter-match (bean #js {:a 1, :b 2} :keywordize-keys false)))
+  (is (core-test/seq-iter-match (bean #js {} :prop->key prop->key :key->prop key->prop)))
+  (is (core-test/seq-iter-match (bean #js {:a 1} :prop->key prop->key :key->prop key->prop)))
+  (is (core-test/seq-iter-match (bean #js {:a 1, :b 2} :prop->key prop->key :key->prop key->prop))))
 
 (deftest iter-test
   (is (iterable? (bean #js {:a 1})))
@@ -1087,10 +1064,10 @@
   (is (== (hash (seq [:a {:b 2}])) (hash (seq (->clj #js [:a #js {:b 2}]))))))
 
 (deftest coll-iter-vec-seq-match
-  (is (seq-iter-match (->clj #js [])))
-  (is (seq-iter-match (->clj #js [1])))
-  (is (seq-iter-match (->clj #js [:a #js {:b 2}])))
-  (is (seq-iter-match (->clj #js [1 2]))))
+  (is (core-test/seq-iter-match (->clj #js [])))
+  (is (core-test/seq-iter-match (->clj #js [1])))
+  (is (core-test/seq-iter-match (->clj #js [:a #js {:b 2}])))
+  (is (core-test/seq-iter-match (->clj #js [1 2]))))
 
 (deftest vec-keywordize-keys-false
   (is (= {"a" 1, "b" [{"c" 2}]}
