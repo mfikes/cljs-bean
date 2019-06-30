@@ -757,7 +757,7 @@
     (instance? ArrayVector x) (.-arr x)
     :else (clj->js x :keyword-fn default-key->prop)))
 
-(defn- ^:private set-empty-colls!
+(defn- set-empty-colls!
   "Set empty map and array to Bean and ArrayVector. Useful for testing."
   []
   (set! (.. js/cljs -core -PersistentArrayMap -EMPTY) (->clj #js {}))

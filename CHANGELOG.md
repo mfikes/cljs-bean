@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file. This change
 ### Changed
 - Separate out copied code ([#53](https://github.com/mfikes/cljs-bean/issues/53))
 
+### Fixed
+- `set-empty-colls!` doesn't need extra private meta ([#52](https://github.com/mfikes/cljs-bean/issues/52))
+
 ## [1.1.0] - 2019-06-29
 ### Added
 - Recursive beans ([#46](https://github.com/mfikes/cljs-bean/issues/46))
