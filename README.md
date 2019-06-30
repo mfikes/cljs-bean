@@ -37,3 +37,11 @@ Read more:
 [Recursive Beans](doc/recursive.md)
 
 [Key Mapping](doc/key-mapping.md)
+
+## License
+
+Copyright © 2019 Mike Fikes
+
+Distributed under the EPL License, same as Clojure. See LICENSE.
+
+The namespace `cljs-bean.from.cljs.core` contains source from [`ClojureScript`](https://github.com/clojure/clojurescript) which is licensed under the EPL license.
