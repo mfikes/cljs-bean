@@ -9,13 +9,6 @@
     [clojure.walk :as walk]
     [goog.object :as gobj]))
 
-(def simple-type-printable-no-nan
-  (gen/one-of [gen/int gen/large-integer (gen/double* {:NaN? false}) gen/char-ascii gen/string-ascii gen/boolean
-               gen/keyword gen/keyword-ns gen/symbol gen/symbol-ns gen/uuid]))
-
-(def gen-any
-  (gen/recursive-gen gen/container-type simple-type-printable-no-nan))
-
 (defn recursive-bean? [x]
   (and (bean? x) (.-recursive? x)))
 
@@ -1293,25 +1286,25 @@
 
 (defspec roundtrip-1
   100
-  (prop/for-all [j (gen/fmap ->js gen-any)]
+  (prop/for-all [j (gen/fmap ->js gen/any-equatable)]
     (let [c (->clj j)]
       (= c (-> c ->js ->clj)))))
 
 (defspec roundtrip-2
   100
-  (prop/for-all [j (gen/fmap ->js gen-any)]
+  (prop/for-all [j (gen/fmap ->js gen/any-equatable)]
     (let [c (js->clj j :keywordize-keys true)]
       (= c (-> c ->js ->clj)))))
 
 (defspec roundtrip-3
   100
-  (prop/for-all [j (gen/fmap ->js gen-any)]
+  (prop/for-all [j (gen/fmap ->js gen/any-equatable)]
     (let [c (->clj j)]
       (= c (-> c ->js ->clj ->js ->clj)))))
 
 (defspec roundtrip-4
   100
-  (prop/for-all [j (gen/fmap ->js gen-any)]
+  (prop/for-all [j (gen/fmap ->js gen/any-equatable)]
     (let [c (js->clj j :keywordize-keys true)]
       (= c (-> c ->js ->clj ->js ->clj)))))
 
