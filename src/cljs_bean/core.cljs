@@ -355,8 +355,8 @@
   (-pr-writer [coll writer opts]
     (print-map coll pr-writer writer opts)))
 
-(deftype ^:priviate TransientArrayVector [^:mutable ^boolean editable?
-                                          ^:mutable arr prop->key key->prop]
+(deftype ^:private TransientArrayVector [^:mutable ^boolean editable?
+                                         ^:mutable arr prop->key key->prop]
   ITransientCollection
   (-conj! [tcoll o]
     (if editable?
