@@ -1285,6 +1285,13 @@
     (let [c (js->clj j :keywordize-keys true)]
       (= c (-> c ->js ->clj ->js ->clj)))))
 
+(defspec roundtrip-5
+  100
+  (prop/for-all [j (gen/fmap ->js gen/any-equatable)]
+    (or (not (object? j))
+      (let [c (bean j)]
+        (= c (-> c ->js bean))))))
+
 (deftest issue-38-test
   (let [b (bean #js {:a 1})]
     (is (== 1 (count b)))
