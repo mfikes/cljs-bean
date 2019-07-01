@@ -46,9 +46,6 @@
     (and (keyword? k) (identical? prop->key keyword))
     (and (string? k) (identical? prop->key identity))))
 
-(defn- recursive-bean? [x]
-  (and (instance? Bean x) (.-recursive? x)))
-
 (deftype ^:private TransientBean [^:mutable ^boolean editable?
                                   obj prop->key key->prop ^boolean recursive?
                                   ^:mutable __cnt]
@@ -739,10 +736,10 @@
   "Recursively converts ClojureScript values to JavaScript.
 
   Where possible, directly returns the backing objects and arrays for values
-  produced using ->clj."
+  produced using ->clj and bean."
   [x]
   (cond
-    (recursive-bean? x) (object x)
+    (instance? Bean x) (.-obj x)
     (instance? ArrayVector x) (.-arr x)
     :else (clj->js x :keyword-fn default-key->prop)))
 

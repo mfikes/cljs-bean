@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file. This change
 ### Changed
 - Separate out copied code ([#53](https://github.com/mfikes/cljs-bean/issues/53))
 - Simplify unwrapping code ([#59](https://github.com/mfikes/cljs-bean/issues/59))
+- Improve perf of `->js` by unwrapping non-recursive beans ([#60](https://github.com/mfikes/cljs-bean/issues/60))
 
 ### Fixed
 - `TransientArrayVector` should be private ([#51](https://github.com/mfikes/cljs-bean/issues/51))
