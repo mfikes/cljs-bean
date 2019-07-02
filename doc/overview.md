@@ -19,7 +19,7 @@ By default, the `bean` function behaves like Clojure’s in that it is not recur
 ;; {:a 1, :obj #js {:x 13, :y 17}, :arr #js [1 2 3]}
 ```
 
-On the other hand, CLSJ Bean provides `->clj` and `->js` converters, which _are_ recursive.
+On the other hand, CLJS Bean provides `->clj` and `->js` converters, which _are_ recursive.
 
 ```clojure
 (require '[cljs-bean.core :refer [->clj ->js]])
