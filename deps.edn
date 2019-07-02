@@ -2,7 +2,7 @@
  :deps  {org.clojure/clojurescript {:mvn/version "1.10.520"}}
  :aliases
         {:repl/node {:extra-paths ["test"]
-                     :extra-deps  {org.clojure/test.check {:mvn/version "0.10.0-alpha4"}}
+                     :extra-deps  {org.clojure/test.check {:mvn/version "0.10.0-RC1"}}
                      :main-opts   ["-m" "cljs.main" "-re" "node"]}
          :test      {:extra-deps  {olical/cljs-test-runner {:mvn/version "3.7.0"}
                                    org.clojure/test.check  {:mvn/version "0.10.0-RC1"}}
