@@ -1,7 +1,7 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
-## [Unreleased]
+## [1.2.0] - 2019-07-02
 ### Changed
 - Separate out copied code ([#53](https://github.com/mfikes/cljs-bean/issues/53))
 - Simplify unwrapping code ([#59](https://github.com/mfikes/cljs-bean/issues/59))
@@ -63,7 +63,8 @@ All notable changes to this project will be documented in this file. This change
 ### Added
 - Initial release.
 
-[1.1.0]: https://github.com/mfikes/cljs-bean/compare/1.0.0...HEAD
+[1.2.0]: https://github.com/mfikes/cljs-bean/compare/1.1.0...1.2.0
+[1.1.0]: https://github.com/mfikes/cljs-bean/compare/1.0.0...1.1.0
 [1.0.0]: https://github.com/mfikes/cljs-bean/compare/0.6.0...1.0.0
 [0.6.0]: https://github.com/mfikes/cljs-bean/compare/0.5.0...0.6.0
 [0.5.0]: https://github.com/mfikes/cljs-bean/compare/0.4.0...0.5.0
