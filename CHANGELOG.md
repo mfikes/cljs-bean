@@ -3,7 +3,8 @@ All notable changes to this project will be documented in this file. This change
 
 ## [1.2.1] - 2019-07-02
 ### Fixed
-- No need to refer exclude arrray ([#64](https://github.com/mfikes/cljs-bean/issues/64))
+- No need to refer exclude array ([#64](https://github.com/mfikes/cljs-bean/issues/64))
+- Malformed cljdoc edn ([#63](https://github.com/mfikes/cljs-bean/issues/63))
 
 ## [1.2.0] - 2019-07-02
 ### Changed

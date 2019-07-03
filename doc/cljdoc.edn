@@ -3,4 +3,4 @@
                    ["Overview" {:file "doc/overview.md"}]
                    ["Object Extraction" {:file "doc/object.md"}]
                    ["Recursive Beans" {:file "doc/recursive.md"}]
-                   ["Key Mapping" {:file "doc/key-mapping.md"}]}
+                   ["Key Mapping" {:file "doc/key-mapping.md"}]]}
