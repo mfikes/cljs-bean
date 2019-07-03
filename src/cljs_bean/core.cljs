@@ -1,5 +1,4 @@
 (ns cljs-bean.core
-  (:refer-clojure :exclude [array])
   (:require
    [cljs-bean.from.cljs.core :as core]
    [goog.object :as gobj]))

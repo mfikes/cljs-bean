@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## [1.2.1] - 2019-07-02
+### Fixed
+- No need to refer exclude arrray ([#64](https://github.com/mfikes/cljs-bean/issues/64))
+
 ## [1.2.0] - 2019-07-02
 ### Changed
 - Separate out copied code ([#53](https://github.com/mfikes/cljs-bean/issues/53))
@@ -63,6 +67,7 @@ All notable changes to this project will be documented in this file. This change
 ### Added
 - Initial release.
 
+[1.2.1]: https://github.com/mfikes/cljs-bean/compare/1.2.0...1.2.1
 [1.2.0]: https://github.com/mfikes/cljs-bean/compare/1.1.0...1.2.0
 [1.1.0]: https://github.com/mfikes/cljs-bean/compare/1.0.0...1.1.0
 [1.0.0]: https://github.com/mfikes/cljs-bean/compare/0.6.0...1.0.0
