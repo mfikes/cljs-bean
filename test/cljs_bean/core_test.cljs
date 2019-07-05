@@ -25,12 +25,15 @@
     (array? x) (every? js? x)
     (object? x) (every? js? (map #(gobj/get x %) (js-keys x)))))
 
+(defn array-vector? [x]
+  (instance? @#'cljs-bean.core/ArrayVector x))
+
 (defn js-able?
   "Returns true for objects produced by this lib that can be converted to JavaScript in constant time."
   [x]
   (cond
     (bean? x) (js? (object x))
-    (instance? @#'cljs-bean.core/ArrayVector x) (js? (.-arr x))
+    (array-vector? x) (js? (.-arr x))
     :else false))
 
 (defn prop->key [prop]
@@ -311,13 +314,10 @@
     (is (== 1 (unchecked-get o "x")))
     (is (== 2 (unchecked-get o "y"))))
   (let [b (bean #js {:x 1} :recursive true)
-        m (assoc b :y {:z 3})
-        o (object m)]
+        m (assoc b :y {:z 3})]
     (is (map? m))
-    (is (bean? m))
-    (is (= {:x 1 :y {:z 3}} m))
-    (is (== 1 (unchecked-get o "x")))
-    (is (== {:z 3} (unchecked-get o "y"))))
+    (is (not (bean? m)))
+    (is (= {:x 1 :y {:z 3}} m)))
   (let [b (bean #js {:x 1})
         m (assoc b "y" 2)]
     (is (map? m))
@@ -1302,3 +1302,13 @@
     (let [t' (dissoc! t :b)]
       (is (== 1 (count t')))
       (is (== 0 (count (dissoc! t' :a)))))))
+
+(deftest issue-68-test
+  (is (not (bean? (assoc (->clj #js {}) :b {:x 2}))))
+  (is (not (bean? (assoc (->clj #js {}) :b [1 2 3]))))
+  (is (not (bean? (persistent! (assoc! (transient (->clj #js {})) :b {:x 2})))))
+  (is (not (bean? (persistent! (assoc! (transient (->clj #js {})) :b [1 2 3])))))
+  (is (not (array-vector? (conj (->clj #js []) {:x 2}))))
+  (is (not (array-vector? (assoc (->clj #js [1]) 0 {:x 2}))))
+  (is (not (array-vector? (persistent! (conj! (transient (->clj #js [])) {:x 2})))))
+  (is (not (array-vector? (persistent! (assoc! (transient (->clj #js [1])) 0 {:x 2}))))))
