@@ -4,7 +4,8 @@
         {:repl/node {:extra-paths ["test"]
                      :extra-deps  {org.clojure/test.check {:mvn/version "0.10.0-RC1"}}
                      :main-opts   ["-m" "cljs.main" "-re" "node"]}
-         :test      {:extra-deps  {olical/cljs-test-runner {:mvn/version "3.7.0"}
-                                   org.clojure/test.check  {:mvn/version "0.10.0-RC1"}}
+         :test      {:extra-deps  {olical/cljs-test-runner    {:mvn/version "3.7.0"}
+                                   com.cognitect/transit-cljs {:mvn/version "0.8.256"}
+                                   org.clojure/test.check     {:mvn/version "0.10.0-RC1"}}
                      :extra-paths ["test" "cljs-test-runner-out/gen"]
                      :main-opts   ["-m" "cljs-test-runner.main"]}}}

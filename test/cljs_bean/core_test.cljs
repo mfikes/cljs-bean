@@ -8,6 +8,7 @@
     [cljs-bean.core :refer [bean bean? object ->clj ->js]]
     [cljs-bean.from.cljs.core-test :as core-test]
     [clojure.walk :as walk]
+    [cognitect.transit :as t]
     [goog.object :as gobj]))
 
 (defn recursive-bean? [x]
@@ -1312,3 +1313,18 @@
   (is (not (array-vector? (assoc (->clj #js [1]) 0 {:x 2}))))
   (is (not (array-vector? (persistent! (conj! (transient (->clj #js [])) {:x 2})))))
   (is (not (array-vector? (persistent! (assoc! (transient (->clj #js [1])) 0 {:x 2}))))))
+
+(defn roundtrip [x]
+  (let [w (t/writer :json
+            {:handlers (cljs-bean.core/transit-writer-handlers)})
+        r (t/reader :json)]
+    (t/read r (t/write w x))))
+
+(deftest issue-70-test
+  (is (= {:a 1} (roundtrip (->clj #js {:a 1}))))
+  (is (= [1 2] (roundtrip (->clj #js [1 2 ]))))
+  (is (= [[:a 1]] (roundtrip (seq (->clj #js {:a 1})))))
+  (is (= [2] (roundtrip (rest (->clj #js [1 2])))))
+  (is (= {:a 1, :b [1 2], :c [2 3]}
+        (roundtrip (-> (->clj #js {:a 1 :b #js [1 2] :c #js [1 2 3]})
+                     (update :c rest))))))
