@@ -33,7 +33,9 @@ The custom handlers cover all of the CLJS Bean types. Examples:
 With these handlers, nested types are properly supported. For example
 
 ```
-(-> (->clj #js {:a 1 :b #js [1 2] :c #js [1 2 3]})
+(-> (->clj #js {:a 1
+                :b #js [1 2]
+                :c #js [1 2 3]})
  (update :c rest))
 ```
 
