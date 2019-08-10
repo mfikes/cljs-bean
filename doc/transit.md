@@ -3,7 +3,7 @@
 When marshalling data containing CLJS Bean types to Transit, special handlers must be 
 specified when creating a Transit writer.
 
-The CLJS Bean custom handlers are provided by calling `cljs-bean.core/transit-writer-handlers`, 
+The CLJS Bean custom handlers are provided by calling `cljs-bean.transit/writer-handlers`,
 and are passed to Transit's `writer` constructor via the `:handlers` option. For example:
 
 ```clojure
@@ -12,7 +12,7 @@ and are passed to Transit's `writer` constructor via the `:handlers` option. For
 
 (defn roundtrip [x]
   (let [w (t/writer :json 
-           {:handlers (cljs-bean.core/transit-writer-handlers)})
+           {:handlers (cljs-bean.transit/writer-handlers)})
         r (t/reader :json)]
     (t/read r (t/write w x))))
 ```

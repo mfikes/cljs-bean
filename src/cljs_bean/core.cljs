@@ -753,14 +753,3 @@
   (set! (.. js/cljs -core -PersistentArrayMap -EMPTY) (->clj #js {}))
   (set! (.. js/cljs -core -PersistentVector -EMPTY) (->clj #js []))
   nil)
-
-(defn transit-writer-handlers
-  "Returns a map of handlers for use with cognitect.transit/writer which
-  enables marshalling CLJS Bean types to Transit data. If cognitect.transit has
-  not been required, returns nil."
-  []
-  (when (exists? cognitect.transit/->MapHandler)
-    {Bean           (^:cljs.analyzer/no-resolve cognitect.transit/->MapHandler)
-     BeanSeq        (^:cljs.analyzer/no-resolve cognitect.transit/->ListHandler)
-     ArrayVector    (^:cljs.analyzer/no-resolve cognitect.transit/->VectorHandler)
-     ArrayVectorSeq (^:cljs.analyzer/no-resolve cognitect.transit/->ListHandler)}))
