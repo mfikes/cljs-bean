@@ -8,7 +8,8 @@ and are passed to Transit's `writer` constructor via the `:handlers` option. For
 
 ```clojure
 (require '[cognitect.transit :as t] 
-         '[cljs-bean.core :refer [->clj]])
+         '[cljs-bean.core :refer [->clj]]
+         '[cljs-bean.transit])
 
 (defn roundtrip [x]
   (let [w (t/writer :json 
