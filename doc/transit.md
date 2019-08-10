@@ -25,7 +25,7 @@ Note that, on the receiving end, plain ClojureScript (not CLJS Bean) types are p
 
 The custom handlers cover all of the CLJS Bean types. Examples:
 
-- `(->clj #js {:a 1})` is a bean, which becomes a persistent map when round tripping
+- `(->clj #js {:a 1})` is a CLJS Bean map type, which becomes a persistent map when round tripping
 - `(->clj #js [1 2])` is a CLJS Bean vector type, which becomes a persistent vector when round tripping
 - `(seq (->clj #js {:a 1}))` is a CLJS Bean sequence type, which which becomes a persistent list when round tripping
 - `(rest (->clj #js [1 2]))` is a CLJS Bean sequence type, which which becomes a persistent list when round tripping
