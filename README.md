@@ -38,6 +38,8 @@ Read more:
 
 [Key Mapping](doc/key-mapping.md)
 
+[Transit](doc/transit.md)
+
 ## License
 
 Copyright © 2019 Mike Fikes
