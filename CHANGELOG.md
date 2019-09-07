@@ -3,8 +3,7 @@ All notable changes to this project will be documented in this file. This change
 
 ## [1.4.0]
 ### Fixed
-- Writing ->clj to transit doesn't work ([#70](https://github.com/mfikes/cljs-bean/issues/70))
-
+- Writing `->clj` to transit doesn't work ([#70](https://github.com/mfikes/cljs-bean/issues/70))
 
 ## [1.3.0]
 ### Fixed
