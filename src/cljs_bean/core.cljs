@@ -14,12 +14,13 @@
       (boolean? x)
       (nil? x)))
 
-(defn- ->val* [x prop->key key->prop]
-  (cond
-    (primitive? x) x
-    (object? x) (Bean. nil x prop->key key->prop #(->val* % prop->key key->prop) true nil nil nil)
-    (array? x) (ArrayVector. nil prop->key key->prop #(->val* % prop->key key->prop) x nil)
-    :else x))
+(defn- ->val-fn [prop->key key->prop]
+  (fn ->val [x]
+    (cond
+      (primitive? x) x
+      (object? x) (Bean. nil x prop->key key->prop ->val true nil nil nil)
+      (array? x) (ArrayVector. nil prop->key key->prop ->val x nil)
+      :else x)))
 
 (defn- unwrap [x]
   (cond
@@ -709,20 +710,20 @@
 
   Calling (bean) produces an empty bean."
   ([]
-   (Bean. nil #js {} keyword default-key->prop #(->val* % keyword default-key->prop) false #js [] 0 nil))
+   (Bean. nil #js {} keyword default-key->prop (->val-fn keyword default-key->prop) false #js [] 0 nil))
   ([x]
-   (Bean. nil x keyword default-key->prop #(->val* % keyword default-key->prop) false nil nil nil))
+   (Bean. nil x keyword default-key->prop (->val-fn keyword default-key->prop) false nil nil nil))
   ([x & opts]
    (let [{:keys [keywordize-keys prop->key key->prop recursive ->val]} opts]
      (cond
        (false? keywordize-keys)
-       (Bean. nil x identity identity (or ->val #(->val* % identity identity)) (boolean recursive) nil nil nil)
+       (Bean. nil x identity identity (or ->val (->val-fn identity identity)) (boolean recursive) nil nil nil)
 
        (and (some? prop->key) (some? key->prop))
-       (Bean. nil x prop->key key->prop (or ->val #(->val* % prop->key key->prop)) (boolean recursive) nil nil nil)
+       (Bean. nil x prop->key key->prop (or ->val (->val-fn prop->key key->prop)) (boolean recursive) nil nil nil)
 
        :else
-       (Bean. nil x keyword default-key->prop (or ->val #(->val* % keyword default-key->prop)) (boolean recursive) nil nil nil)))))
+       (Bean. nil x keyword default-key->prop (or ->val (->val-fn keyword default-key->prop)) (boolean recursive) nil nil nil)))))
 
 (defn bean?
   "Returns true if x is a bean."
@@ -734,6 +735,8 @@
   [b]
   (.-obj b))
 
+(def ^:private ->val* (->val-fn keyword default-key->prop))
+
 (defn ->clj
   "Recursively converts JavaScript values to ClojureScript.
 
@@ -742,7 +745,7 @@
   JavaScript arrays are converted to read-only implementations of the vector
   abstraction, backed by the supplied array."
   [x]
-  (->val* x keyword default-key->prop))
+  (->val* x))
 
 (defn ->js
   "Recursively converts ClojureScript values to JavaScript.
