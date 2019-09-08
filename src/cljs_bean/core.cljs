@@ -14,7 +14,7 @@
       (boolean? x)
       (nil? x)))
 
-(defn- ->val-fn [prop->key key->prop]
+(defn- recursive->val-fn [prop->key key->prop]
   (fn ->val [x]
     (cond
       (primitive? x) x
@@ -33,17 +33,12 @@
 
 (defn- snapshot [x prop->key ->val recursive?]
   (let [result (volatile! (transient empty-map))]
-    (gobj/forEach x (fn [v k _] (vswap! result assoc! (prop->key k)
-                                  (cond-> v
-                                    recursive? ->val))))
+    (gobj/forEach x (fn [v k _] (vswap! result assoc! (prop->key k) (->val v))))
     (persistent! @result)))
 
 (defn- indexed-entry [obj prop->key ->val ^boolean recursive? arr i]
   (let [prop (aget arr i)]
-    (MapEntry. (prop->key prop)
-      (cond-> (unchecked-get obj prop)
-        recursive? ->val)
-      nil)))
+    (MapEntry. (prop->key prop) (->val (unchecked-get obj prop)) nil)))
 
 (defn- compatible-key? [k prop->key]
   (or
@@ -68,14 +63,13 @@
   ILookup
   (-lookup [_ k]
     (if editable?
-      (cond-> (unchecked-get obj (key->prop k))
-        recursive? ->val)
+      (->val (unchecked-get obj (key->prop k)))
       (throw (js/Error. "lookup after persistent!"))))
   (-lookup [_ k not-found]
     (if editable?
       (let [ret (gobj/get obj (key->prop k) not-found)]
         (cond-> ret
-          (and recursive? (not (identical? ret not-found)))
+          (not (identical? ret not-found))
           ->val))
       (throw (js/Error. "lookup after persistent!"))))
 
@@ -119,14 +113,13 @@
   IFn
   (-invoke [_ k]
     (if editable?
-      (cond-> (unchecked-get obj (key->prop k))
-        recursive? ->val)
+      (->val (unchecked-get obj (key->prop k)))
       (throw (js/Error. "lookup after persistent!"))))
   (-invoke [_ k not-found]
     (if editable?
       (let [ret (gobj/get obj (key->prop k) not-found)]
         (cond-> ret
-          (and recursive? (not (identical? ret not-found)))
+          (not (identical? ret not-found))
           ->val))
       (throw (js/Error. "lookup after persistent!")))))
 
@@ -314,12 +307,11 @@
 
   ILookup
   (-lookup [_ k]
-    (cond-> (unchecked-get obj (key->prop k))
-      recursive? ->val))
+    (->val (unchecked-get obj (key->prop k))))
   (-lookup [_ k not-found]
     (let [ret (gobj/get obj (key->prop k) not-found)]
       (cond-> ret
-        (and recursive? (not (identical? ret not-found)))
+        (not (identical? ret not-found))
         ->val)))
 
   IKVReduce
@@ -710,20 +702,32 @@
 
   Calling (bean) produces an empty bean."
   ([]
-   (Bean. nil #js {} keyword default-key->prop (->val-fn keyword default-key->prop) false #js [] 0 nil))
+   (Bean. nil #js {} keyword default-key->prop identity false #js [] 0 nil))
   ([x]
-   (Bean. nil x keyword default-key->prop (->val-fn keyword default-key->prop) false nil nil nil))
+   (Bean. nil x keyword default-key->prop identity false nil nil nil))
   ([x & opts]
    (let [{:keys [keywordize-keys prop->key key->prop recursive ->val]} opts]
      (cond
        (false? keywordize-keys)
-       (Bean. nil x identity identity (or ->val (->val-fn identity identity)) (boolean recursive) nil nil nil)
+       (Bean. nil x identity identity (or ->val
+                                          (if recursive
+                                            (recursive->val-fn identity identity)
+                                            identity))
+         (boolean recursive) nil nil nil)
 
        (and (some? prop->key) (some? key->prop))
-       (Bean. nil x prop->key key->prop (or ->val (->val-fn prop->key key->prop)) (boolean recursive) nil nil nil)
+       (Bean. nil x prop->key key->prop (or ->val
+                                            (if recursive
+                                              (recursive->val-fn prop->key key->prop)
+                                              identity))
+         (boolean recursive) nil nil nil)
 
        :else
-       (Bean. nil x keyword default-key->prop (or ->val (->val-fn keyword default-key->prop)) (boolean recursive) nil nil nil)))))
+       (Bean. nil x keyword default-key->prop (or ->val
+                                                  (if recursive
+                                                    (recursive->val-fn keyword default-key->prop)
+                                                    identity))
+         (boolean recursive) nil nil nil)))))
 
 (defn bean?
   "Returns true if x is a bean."
@@ -735,7 +739,7 @@
   [b]
   (.-obj b))
 
-(def ^:private ->val* (->val-fn keyword default-key->prop))
+(def ^:private ->val* (recursive->val-fn keyword default-key->prop))
 
 (defn ->clj
   "Recursively converts JavaScript values to ClojureScript.

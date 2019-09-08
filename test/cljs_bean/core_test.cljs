@@ -1318,6 +1318,5 @@
 (deftest issue-67-test
   (is (= {:foo "a", :num 3}
         (bean #js {:foo (->Foo "a"), :num 3}
-          :recursive true
           :->val (fn [x]
                    (cond-> x (instance? Foo x) (:x x)))))))
