@@ -19,7 +19,7 @@
     (cond
       (primitive? x) x
       (object? x) (Bean. nil x prop->key key->prop ->val true nil nil nil)
-      (array? x) (ArrayVector. nil prop->key key->prop ->val x nil)
+      (array? x) (ArrayVector. nil ->val x nil)
       :else x)))
 
 (defn- unwrap [x]
@@ -130,7 +130,7 @@
           ->val))
       (throw (js/Error. "lookup after persistent!")))))
 
-(deftype ^:private BeanIterator [obj prop->key key->prop ->val ^boolean recursive? arr ^:mutable i cnt]
+(deftype ^:private BeanIterator [obj prop->key ->val ^boolean recursive? arr ^:mutable i cnt]
   Object
   (hasNext [_]
     (< i cnt))
@@ -139,7 +139,7 @@
       (set! i (inc i))
       ret)))
 
-(deftype ^:private BeanSeq [obj prop->key key->prop ->val ^boolean recursive? arr i meta]
+(deftype ^:private BeanSeq [obj prop->key ->val ^boolean recursive? arr i meta]
   Object
   (toString [coll]
     (pr-str* coll))
@@ -155,7 +155,7 @@
     (core/-lastIndexOf coll x start))
 
   ICloneable
-  (-clone [_] (BeanSeq. obj prop->key key->prop ->val recursive? arr i meta))
+  (-clone [_] (BeanSeq. obj prop->key ->val recursive? arr i meta))
 
   ISeqable
   (-seq [this] this)
@@ -166,18 +166,18 @@
   (-with-meta [coll new-meta]
     (if (identical? new-meta meta)
       coll
-      (BeanSeq. obj prop->key key->prop ->val recursive? arr i new-meta)))
+      (BeanSeq. obj prop->key ->val recursive? arr i new-meta)))
 
   ASeq
   ISeq
   (-first [_] (indexed-entry obj prop->key ->val recursive? arr i))
   (-rest [_] (if (< (inc i) (alength arr))
-               (BeanSeq. obj prop->key key->prop ->val recursive? arr (inc i) nil)
+               (BeanSeq. obj prop->key ->val recursive? arr (inc i) nil)
                ()))
 
   INext
   (-next [_] (if (< (inc i) (alength arr))
-               (BeanSeq. obj prop->key key->prop ->val recursive? arr (inc i) nil)
+               (BeanSeq. obj prop->key ->val recursive? arr (inc i) nil)
                nil))
 
   ICounted
@@ -272,14 +272,14 @@
   (-iterator [coll]
     (when (nil? __arr)
       (set! __arr (js-keys obj)))
-    (BeanIterator. obj prop->key key->prop ->val recursive? __arr 0 (-count coll)))
+    (BeanIterator. obj prop->key ->val recursive? __arr 0 (-count coll)))
 
   ISeqable
   (-seq [_]
     (when (nil? __arr)
       (set! __arr (js-keys obj)))
     (when (pos? (alength __arr))
-      (BeanSeq. obj prop->key key->prop ->val recursive? __arr 0 nil)))
+      (BeanSeq. obj prop->key ->val recursive? __arr 0 nil)))
 
   IAssociative
   (-assoc [_ k v]
@@ -361,7 +361,7 @@
     (print-map coll pr-writer writer opts)))
 
 (deftype ^:private TransientArrayVector [^:mutable ^boolean editable?
-                                         ^:mutable arr prop->key key->prop ->val]
+                                         ^:mutable arr ->val]
   ITransientCollection
   (-conj! [tcoll o]
     (if editable?
@@ -376,7 +376,7 @@
     (if editable?
       (do
         (set! editable? false)
-        (ArrayVector. nil prop->key key->prop ->val arr nil))
+        (ArrayVector. nil ->val arr nil))
       (throw (js/Error. "persistent! called twice"))))
 
   ITransientAssociative
@@ -439,7 +439,7 @@
   (-invoke [coll k not-found]
     (-lookup coll k not-found)))
 
-(deftype ^:private ArrayVectorIterator [prop->key key->prop ->val arr ^:mutable i cnt]
+(deftype ^:private ArrayVectorIterator [->val arr ^:mutable i cnt]
   Object
   (hasNext [_]
     (< i cnt))
@@ -448,7 +448,7 @@
       (set! i (inc i))
       ret)))
 
-(deftype ^:private ArrayVectorSeq [prop->key key->prop ->val arr i meta]
+(deftype ^:private ArrayVectorSeq [->val arr i meta]
   Object
   (toString [coll]
     (pr-str* coll))
@@ -464,7 +464,7 @@
     (core/-lastIndexOf coll x start))
 
   ICloneable
-  (-clone [_] (ArrayVectorSeq. prop->key key->prop ->val arr i meta))
+  (-clone [_] (ArrayVectorSeq. ->val arr i meta))
 
   ISeqable
   (-seq [this] this)
@@ -475,18 +475,18 @@
   (-with-meta [coll new-meta]
     (if (identical? new-meta meta)
       coll
-      (ArrayVectorSeq. prop->key key->prop ->val arr i new-meta)))
+      (ArrayVectorSeq. ->val arr i new-meta)))
 
   ASeq
   ISeq
   (-first [_] (->val (aget arr i)))
   (-rest [_] (if (< (inc i) (alength arr))
-               (ArrayVectorSeq. prop->key key->prop ->val arr (inc i) nil)
+               (ArrayVectorSeq. ->val arr (inc i) nil)
                ()))
 
   INext
   (-next [_] (if (< (inc i) (alength arr))
-               (ArrayVectorSeq. prop->key key->prop ->val arr (inc i) nil)
+               (ArrayVectorSeq. ->val arr (inc i) nil)
                nil))
 
   ICounted
@@ -529,7 +529,7 @@
   (-pr-writer [coll writer opts]
     (pr-sequential-writer writer pr-writer "(" " " ")" opts coll)))
 
-(deftype ^:private ArrayVector [meta prop->key key->prop ->val arr ^:mutable __hash]
+(deftype ^:private ArrayVector [meta ->val arr ^:mutable __hash]
   Object
   (toString [coll]
     (pr-str* coll))
@@ -545,13 +545,13 @@
     (core/-lastIndexOf coll x start))
 
   ICloneable
-  (-clone [_] (ArrayVector. meta prop->key key->prop ->val arr __hash))
+  (-clone [_] (ArrayVector. meta ->val arr __hash))
 
   IWithMeta
   (-with-meta [coll new-meta]
     (if (identical? new-meta meta)
       coll
-      (ArrayVector. new-meta prop->key key->prop ->val arr __hash)))
+      (ArrayVector. new-meta ->val arr __hash)))
 
   IMeta
   (-meta [coll] meta)
@@ -566,7 +566,7 @@
         (== 1 (alength arr)) (-empty coll)
         :else
         (let [new-arr (aclone arr)]
-          (ArrayVector. meta prop->key key->prop ->val
+          (ArrayVector. meta ->val
             (.slice new-arr 0 (dec (alength new-arr))) nil))))
 
   ICollection
@@ -575,11 +575,11 @@
       (-conj (vec arr) o)
       (let [new-arr (aclone arr)]
         (unchecked-set new-arr (alength new-arr) (unwrap o))
-        (ArrayVector. meta prop->key key->prop ->val new-arr nil))))
+        (ArrayVector. meta ->val new-arr nil))))
 
   IEmptyableCollection
   (-empty [coll]
-    (ArrayVector. meta prop->key key->prop ->val #js [] nil))
+    (ArrayVector. meta ->val #js [] nil))
 
   ISequential
   IEquiv
@@ -592,7 +592,7 @@
   ISeqable
   (-seq [coll]
     (when (pos? (alength arr))
-      (ArrayVectorSeq. prop->key key->prop ->val arr 0 nil)))
+      (ArrayVectorSeq. ->val arr 0 nil)))
 
   ICounted
   (-count [coll] (alength arr))
@@ -630,7 +630,7 @@
         (-assoc-n (vec arr) n val)
         (let [new-arr (aclone arr)]
           (aset new-arr n (unwrap val))
-          (ArrayVector. meta prop->key key->prop ->val new-arr nil)))
+          (ArrayVector. meta ->val new-arr nil)))
       (== n (alength arr)) (-conj coll val)
       :else (throw (js/Error. (str "Index " n " out of bounds  [0," (alength arr) "]")))))
 
@@ -668,7 +668,7 @@
 
   IEditableCollection
   (-as-transient [coll]
-    (TransientArrayVector. true (aclone arr) prop->key key->prop ->val))
+    (TransientArrayVector. true (aclone arr) ->val))
 
   IReversible
   (-rseq [coll]
@@ -677,7 +677,7 @@
 
   IIterable
   (-iterator [_]
-    (ArrayVectorIterator. prop->key key->prop ->val arr 0 (alength arr)))
+    (ArrayVectorIterator. ->val arr 0 (alength arr)))
 
   IComparable
   (-compare [x y]
