@@ -1312,3 +1312,20 @@
   (is (not (array-vector? (assoc (->clj #js [1]) 0 {:x 2}))))
   (is (not (array-vector? (persistent! (conj! (transient (->clj #js [])) {:x 2})))))
   (is (not (array-vector? (persistent! (assoc! (transient (->clj #js [1])) 0 {:x 2}))))))
+
+(defn js-symbol? [x]
+  (js* "typeof ~{} === 'symbol'" x))
+
+(defn js-symbol [x]
+  (.for js/Symbol x))
+
+(defn js-symbol->symbol [x]
+  (symbol (.keyFor js/Symbol x)))
+
+(deftest issue-67-test
+  (is (= {:sym 'if, :num 3}
+        (bean #js {:sym (js-symbol "if"), :num 3}
+          :recursive true
+          :->val (fn [x]
+                   (cond-> x
+                     (js-symbol? x) js-symbol->symbol))))))
