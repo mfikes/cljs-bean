@@ -14,12 +14,12 @@
       (boolean? x)
       (nil? x)))
 
-(defn- recursive->val-fn [prop->key key->prop]
-  (fn ->val [x]
+(defn- ->recursive-val-fn [prop->key key->prop]
+  (fn ->recursive-val [x]
     (cond
       (primitive? x) x
-      (object? x) (Bean. nil x prop->key key->prop ->val true nil nil nil)
-      (array? x) (ArrayVector. nil ->val x nil)
+      (object? x) (Bean. nil x prop->key key->prop ->recursive-val true nil nil nil)
+      (array? x) (ArrayVector. nil ->recursive-val x nil)
       :else x)))
 
 (defn- unwrap [x]
@@ -711,21 +711,21 @@
        (false? keywordize-keys)
        (Bean. nil x identity identity (or ->val
                                           (if recursive
-                                            (recursive->val-fn identity identity)
+                                            (->recursive-val-fn identity identity)
                                             identity))
          (boolean recursive) nil nil nil)
 
        (and (some? prop->key) (some? key->prop))
        (Bean. nil x prop->key key->prop (or ->val
                                             (if recursive
-                                              (recursive->val-fn prop->key key->prop)
+                                              (->recursive-val-fn prop->key key->prop)
                                               identity))
          (boolean recursive) nil nil nil)
 
        :else
        (Bean. nil x keyword default-key->prop (or ->val
                                                   (if recursive
-                                                    (recursive->val-fn keyword default-key->prop)
+                                                    (->recursive-val-fn keyword default-key->prop)
                                                     identity))
          (boolean recursive) nil nil nil)))))
 
@@ -739,7 +739,7 @@
   [b]
   (.-obj b))
 
-(def ^:private ->val* (recursive->val-fn keyword default-key->prop))
+(def ^:private ->recursive-val (->recursive-val-fn keyword default-key->prop))
 
 (defn ->clj
   "Recursively converts JavaScript values to ClojureScript.
@@ -749,7 +749,7 @@
   JavaScript arrays are converted to read-only implementations of the vector
   abstraction, backed by the supplied array."
   [x]
-  (->val* x))
+  (->recursive-val x))
 
 (defn ->js
   "Recursively converts ClojureScript values to JavaScript.
