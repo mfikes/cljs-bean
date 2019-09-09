@@ -1312,3 +1312,12 @@
   (is (not (array-vector? (assoc (->clj #js [1]) 0 {:x 2}))))
   (is (not (array-vector? (persistent! (conj! (transient (->clj #js [])) {:x 2})))))
   (is (not (array-vector? (persistent! (assoc! (transient (->clj #js [1])) 0 {:x 2}))))))
+
+(defrecord Foo [x])
+
+(deftest issue-67-test
+  (is (= {:foo "a", :num 3}
+        (bean #js {:foo (->Foo "a"), :num 3}
+          :recursive true
+          :transform (fn [x]
+                       (cond-> x (instance? Foo x) (:x x)))))))
