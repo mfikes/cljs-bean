@@ -38,6 +38,8 @@ Read more:
 
 [Key Mapping](doc/key-mapping.md)
 
+[Value Conversion](doc/value-conversion.md)
+
 [Transit](doc/transit.md)
 
 ## License

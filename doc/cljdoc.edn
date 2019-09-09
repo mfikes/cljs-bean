@@ -4,4 +4,5 @@
                    ["Object Extraction" {:file "doc/object.md"}]
                    ["Recursive Beans" {:file "doc/recursive.md"}]
                    ["Key Mapping" {:file "doc/key-mapping.md"}]
+                   ["Value Conversion" {:file "doc/value-conversion.md"}]
                    ["Transit" {:file "doc/transit.md"}]]}
