@@ -31,12 +31,12 @@
 
 (def ^:private empty-map (.. js/cljs -core -PersistentArrayMap -EMPTY))
 
-(defn- snapshot [x prop->key ->val recursive?]
+(defn- snapshot [x prop->key ->val]
   (let [result (volatile! (transient empty-map))]
     (gobj/forEach x (fn [v k _] (vswap! result assoc! (prop->key k) (->val v))))
     (persistent! @result)))
 
-(defn- indexed-entry [obj prop->key ->val ^boolean recursive? arr i]
+(defn- indexed-entry [obj prop->key ->val arr i]
   (let [prop (aget arr i)]
     (MapEntry. (prop->key prop) (->val (unchecked-get obj prop)) nil)))
 
@@ -94,7 +94,7 @@
   (-assoc! [tcoll k v]
     (if editable?
       (if (snapshot? k v prop->key recursive?)
-        (-assoc! (transient (snapshot obj prop->key ->val recursive?)) k v)
+        (-assoc! (transient (snapshot obj prop->key ->val)) k v)
         (do
           (unchecked-set obj (key->prop k) (cond-> v recursive? unwrap))
           (set! __cnt nil)
@@ -123,16 +123,16 @@
           ->val))
       (throw (js/Error. "lookup after persistent!")))))
 
-(deftype ^:private BeanIterator [obj prop->key ->val ^boolean recursive? arr ^:mutable i cnt]
+(deftype ^:private BeanIterator [obj prop->key ->val arr ^:mutable i cnt]
   Object
   (hasNext [_]
     (< i cnt))
   (next [_]
-    (let [ret (indexed-entry obj prop->key ->val recursive? arr i)]
+    (let [ret (indexed-entry obj prop->key ->val arr i)]
       (set! i (inc i))
       ret)))
 
-(deftype ^:private BeanSeq [obj prop->key ->val ^boolean recursive? arr i meta]
+(deftype ^:private BeanSeq [obj prop->key ->val arr i meta]
   Object
   (toString [coll]
     (pr-str* coll))
@@ -148,7 +148,7 @@
     (core/-lastIndexOf coll x start))
 
   ICloneable
-  (-clone [_] (BeanSeq. obj prop->key ->val recursive? arr i meta))
+  (-clone [_] (BeanSeq. obj prop->key ->val arr i meta))
 
   ISeqable
   (-seq [this] this)
@@ -159,18 +159,18 @@
   (-with-meta [coll new-meta]
     (if (identical? new-meta meta)
       coll
-      (BeanSeq. obj prop->key ->val recursive? arr i new-meta)))
+      (BeanSeq. obj prop->key ->val arr i new-meta)))
 
   ASeq
   ISeq
-  (-first [_] (indexed-entry obj prop->key ->val recursive? arr i))
+  (-first [_] (indexed-entry obj prop->key ->val arr i))
   (-rest [_] (if (< (inc i) (alength arr))
-               (BeanSeq. obj prop->key ->val recursive? arr (inc i) nil)
+               (BeanSeq. obj prop->key ->val arr (inc i) nil)
                ()))
 
   INext
   (-next [_] (if (< (inc i) (alength arr))
-               (BeanSeq. obj prop->key ->val recursive? arr (inc i) nil)
+               (BeanSeq. obj prop->key ->val arr (inc i) nil)
                nil))
 
   ICounted
@@ -181,12 +181,12 @@
   (-nth [_ n]
     (let [i (+ n i)]
       (if (and (<= 0 i) (< i (alength arr)))
-        (indexed-entry obj prop->key ->val recursive? arr i)
+        (indexed-entry obj prop->key ->val arr i)
         (throw (js/Error. "Index out of bounds")))))
   (-nth [_ n not-found]
     (let [i (+ n i)]
       (if (and (<= 0 i) (< i (alength arr)))
-        (indexed-entry obj prop->key ->val recursive? arr i)
+        (indexed-entry obj prop->key ->val arr i)
         not-found)))
 
   ISequential
@@ -265,19 +265,19 @@
   (-iterator [coll]
     (when (nil? __arr)
       (set! __arr (js-keys obj)))
-    (BeanIterator. obj prop->key ->val recursive? __arr 0 (-count coll)))
+    (BeanIterator. obj prop->key ->val __arr 0 (-count coll)))
 
   ISeqable
   (-seq [_]
     (when (nil? __arr)
       (set! __arr (js-keys obj)))
     (when (pos? (alength __arr))
-      (BeanSeq. obj prop->key ->val recursive? __arr 0 nil)))
+      (BeanSeq. obj prop->key ->val __arr 0 nil)))
 
   IAssociative
   (-assoc [_ k v]
     (if (snapshot? k v prop->key recursive?)
-      (-assoc (with-meta (snapshot obj prop->key ->val recursive?) meta) k v)
+      (-assoc (with-meta (snapshot obj prop->key ->val) meta) k v)
       (Bean. meta
         (doto (gobj/clone obj) (unchecked-set (key->prop k) (cond-> v recursive? unwrap)))
         prop->key key->prop ->val recursive? nil nil nil)))
@@ -289,7 +289,7 @@
   (-find [_ k]
     (let [v (gobj/get obj (key->prop k) lookup-sentinel)]
       (when-not (identical? v lookup-sentinel)
-        (MapEntry. k (cond-> v recursive? ->val) nil))))
+        (MapEntry. k (->val v) nil))))
 
   IMap
   (-dissoc [_ k]
@@ -321,7 +321,7 @@
         (gobj/forEach obj
           (fn [v k _]
             (let [r (vswap! result f (prop->key k)
-                      (cond-> v recursive? ->val))]
+                      (->val v))]
               (when (reduced? r) (throw r)))))
         @result)
       (catch :default x
