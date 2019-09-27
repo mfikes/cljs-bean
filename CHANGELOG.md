@@ -1,7 +1,7 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
-## [Unreleased]
+## [1.5.0]
 ### Changed
 - Add fast paths for primitive values ([#73](https://github.com/mfikes/cljs-bean/issues/73))
 
@@ -80,7 +80,7 @@ All notable changes to this project will be documented in this file. This change
 ### Added
 - Initial release.
 
-[Unreleased]: https://github.com/mfikes/cljs-bean/compare/1.4.0...HEAD
+[1.5.0]: https://github.com/mfikes/cljs-bean/compare/1.4.0...1.5.0
 [1.4.0]: https://github.com/mfikes/cljs-bean/compare/1.3.0...1.4.0
 [1.3.0]: https://github.com/mfikes/cljs-bean/compare/1.2.1...1.3.0
 [1.2.1]: https://github.com/mfikes/cljs-bean/compare/1.2.0...1.2.1
