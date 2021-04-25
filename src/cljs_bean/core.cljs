@@ -292,7 +292,7 @@
         prop->key key->prop transform recursive? nil nil nil)))
 
   (-contains-key? [coll k]
-    (contains? coll k))
+    (not (identical? (-lookup coll k lookup-sentinel) lookup-sentinel)))
 
   IFind
   (-find [_ k]
