@@ -1,4 +1,4 @@
-(defproject cljs-bean "1.6.0"
+(defproject cljs-bean "1.7.0"
   :description "Clojure's bean function for ClojureScript"
   :url "https://github.com/mfikes/cljs-bean"
   :scm {:name "git" :url "https://github.com/mfikes/cljs-bean"}

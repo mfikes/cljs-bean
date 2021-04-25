@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## [1.7.0]
+### Changed
+- Avoid `contains?` in `-contains-key?` ([#79](https://github.com/mfikes/cljs-bean/issues/79))
+
 ## [1.6.0]
 ### Added
 - Make JavaScript -> ClojureScript be user-hookable ([#67](https://github.com/mfikes/cljs-bean/issues/67))
@@ -84,6 +88,7 @@ All notable changes to this project will be documented in this file. This change
 ### Added
 - Initial release.
 
+[1.7.0]: https://github.com/mfikes/cljs-bean/compare/1.6.0...1.7.0
 [1.6.0]: https://github.com/mfikes/cljs-bean/compare/1.5.0...1.6.0
 [1.5.0]: https://github.com/mfikes/cljs-bean/compare/1.4.0...1.5.0
 [1.4.0]: https://github.com/mfikes/cljs-bean/compare/1.3.0...1.4.0
