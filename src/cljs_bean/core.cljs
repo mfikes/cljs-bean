@@ -42,7 +42,7 @@
     (persistent! @result)))
 
 (defn- snapshot-arr [arr]
-  (mapv ->clj arr))
+  (vec (amap arr idx ret (->clj (aget arr idx)))))
 
 (defn- indexed-entry [obj prop->key key->prop transform ^boolean recursive? arr i]
   (let [prop (aget arr i)]
