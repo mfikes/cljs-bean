@@ -1321,3 +1321,16 @@
           :recursive true
           :transform (fn [x]
                        (cond-> x (instance? Foo x) (:x x)))))))
+
+(deftest issue-86-test
+  (let [clj-obj (->clj #js {:coll #js [#js {:id "foo"}]})]
+    (is (= (conj (:coll clj-obj) {:id "bar"})
+          [{:id "foo"} {:id "bar"}])))
+  (is (expected-js-able? [{:a 1} 1] (conj (->clj #js [#js {:a 1}]) 1)))
+  (is (expected-non-js-able? [{:a 1} {:b 2}] (conj (->clj #js [#js {:a 1}]) {:b 2})))
+  (is (expected-js-able? [{:a 1} 1] (persistent! (conj! (transient (->clj #js [#js {:a 1}])) 1))))
+  (is (expected-non-js-able? [{:a 1} {:b 2}] (persistent! (conj! (transient (->clj #js [#js {:a 1}])) {:b 2}))))
+  (is (expected-js-able? [{:a 1} 1] (assoc (->clj #js [#js {:a 1}]) 1 1)))
+  (is (expected-non-js-able? [{:a 1} {:b 2}] (assoc (->clj #js [#js {:a 1}]) 1 {:b 2})))
+  (is (expected-js-able? [{:a 1} 1] (persistent! (assoc! (transient (->clj #js [#js {:a 1}])) 1 1))))
+  (is (expected-non-js-able? [{:a 1} {:b 2}] (persistent! (assoc! (transient (->clj #js [#js {:a 1}])) 1 {:b 2})))))

@@ -5,6 +5,7 @@
 
 (declare Bean)
 (declare ArrayVector)
+(declare ->clj)
 
 (def ^:private lookup-sentinel #js {})
 
@@ -39,6 +40,9 @@
                                   (cond-> v
                                     recursive? (->val prop->key key->prop transform)))))
     (persistent! @result)))
+
+(defn- snapshot-arr [arr]
+  (vec (amap arr idx ret (->clj (aget arr idx)))))
 
 (defn- indexed-entry [obj prop->key key->prop transform ^boolean recursive? arr i]
   (let [prop (aget arr i)]
@@ -368,7 +372,7 @@
   (-conj! [tcoll o]
     (if editable?
       (if (not (compatible-value? o true))
-        (-conj! (transient (vec arr)) o)
+        (-conj! (transient (snapshot-arr arr)) o)
         (do
           (.push arr (unwrap o))
           tcoll))
@@ -389,7 +393,7 @@
   (-assoc-n! [tcoll n val]
     (if editable?
       (if (not (compatible-value? val true))
-        (-assoc-n! (transient (vec arr)) n val)
+        (-assoc-n! (transient (snapshot-arr arr)) n val)
         (cond
           (and (<= 0 n) (< n (alength arr)))
           (do (aset arr n (unwrap val))
@@ -574,7 +578,7 @@
   ICollection
   (-conj [_ o]
     (if (not (compatible-value? o true))
-      (-conj (vec arr) o)
+      (-conj (snapshot-arr arr) o)
       (let [new-arr (aclone arr)]
         (unchecked-set new-arr (alength new-arr) (unwrap o))
         (ArrayVector. meta prop->key key->prop transform new-arr nil))))
@@ -629,7 +633,7 @@
     (cond
       (and (<= 0 n) (< n (alength arr)))
       (if (not (compatible-value? val true))
-        (-assoc-n (vec arr) n val)
+        (-assoc-n (snapshot-arr arr) n val)
         (let [new-arr (aclone arr)]
           (aset new-arr n (unwrap val))
           (ArrayVector. meta prop->key key->prop transform new-arr nil)))
