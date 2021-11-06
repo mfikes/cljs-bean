@@ -5,6 +5,7 @@
 
 (declare Bean)
 (declare ArrayVector)
+(declare ->clj)
 
 (def ^:private lookup-sentinel #js {})
 
@@ -574,7 +575,7 @@
   ICollection
   (-conj [_ o]
     (if (not (compatible-value? o true))
-      (-conj (vec arr) o)
+      (-conj (mapv ->clj arr) o)
       (let [new-arr (aclone arr)]
         (unchecked-set new-arr (alength new-arr) (unwrap o))
         (ArrayVector. meta prop->key key->prop transform new-arr nil))))

@@ -1321,3 +1321,8 @@
           :recursive true
           :transform (fn [x]
                        (cond-> x (instance? Foo x) (:x x)))))))
+
+(deftest issue-86-test
+  (let [clj-obj (->clj #js {:coll #js [#js {:id "foo"}]})]
+    (is (= (conj (:coll clj-obj) {:id "bar"})
+          [{:id "foo"} {:id "bar"}]))))
