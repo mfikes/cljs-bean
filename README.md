@@ -42,7 +42,7 @@ Read more:
 
 ## License
 
-Copyright © 2019–2021 Mike Fikes
+Copyright © 2019–2022 Mike Fikes
 
 Distributed under the EPL License, same as Clojure. See LICENSE.
 
