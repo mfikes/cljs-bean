@@ -748,20 +748,51 @@
   JavaScript objects are converted to beans with keywords for keys.
 
   JavaScript arrays are converted to read-only implementations of the vector
-  abstraction, backed by the supplied array."
-  [x]
-  (->val x keyword default-key->prop nil))
+  abstraction, backed by the supplied array.
+
+  By default, ->clj produces values that keywordize the keys. Supply
+  :keywordize-keys false to suppress this behavior. You can alternatively
+  supply :prop->key and :key->prop with functions that control the mapping
+  between properties and keys.
+
+  Supply :transform and a function of one argument to transform values being
+  converted from JavaScript to ClojureScript. This function should return nil
+  if no conversion is to be performed, thus allowing default logic to be applied."
+  ([x]
+   (->val x keyword default-key->prop nil))
+  ([x & opts]
+   (let [{:keys [keywordize-keys prop->key key->prop transform]} opts]
+     (cond
+       (false? keywordize-keys)
+       (->val x identity identity transform)
+
+       (and (some? prop->key) (some? key->prop))
+       (->val x prop->key key->prop transform)
+
+       :else
+       (->val x keyword default-key->prop transform)))))
 
 (defn ->js
   "Recursively converts ClojureScript values to JavaScript.
 
   Where possible, directly returns the backing objects and arrays for values
-  produced using ->clj and bean."
-  [x]
-  (cond
-    (instance? Bean x) (.-obj x)
-    (instance? ArrayVector x) (.-arr x)
-    :else (clj->js x :keyword-fn default-key->prop)))
+  produced using ->clj and bean.
+
+  Otherwise delegates to clj->js to perform the conversion, converting keyword
+  keys using their qualified names. You can alternatively supply :key->prop with
+  a function that controls the mapping from keys to properties."
+  ([x]
+   (cond
+     (instance? Bean x) (.-obj x)
+     (instance? ArrayVector x) (.-arr x)
+     :else (clj->js x :keyword-fn default-key->prop)))
+  ([x & opts]
+   (cond
+     (instance? Bean x) (.-obj x)
+     (instance? ArrayVector x) (.-arr x)
+     :else (let [{:keys [key->prop]
+                  :or   {key->prop default-key->prop}} opts]
+             (clj->js x :keyword-fn key->prop)))))
 
 (defn- set-empty-colls!
   "Set empty map and array to Bean and ArrayVector. Useful for testing."

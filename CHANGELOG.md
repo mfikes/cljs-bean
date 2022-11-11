@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## [Unreleased]
+### Added
+- Keyword conversion control in ->clj and ->js ([#91](https://github.com/mfikes/cljs-bean/issues/91))
+
 ## [1.8.0]
 ### Fixed
 - Fix vector shapshot when adding non-primitives ([#87](https://github.com/mfikes/cljs-bean/issues/87))
@@ -92,6 +96,7 @@ All notable changes to this project will be documented in this file. This change
 ### Added
 - Initial release.
 
+[Unreleased]: https://github.com/mfikes/cljs-bean/compare/1.8.0...HEAD
 [1.8.0]: https://github.com/mfikes/cljs-bean/compare/1.7.0...1.8.0
 [1.7.0]: https://github.com/mfikes/cljs-bean/compare/1.6.0...1.7.0
 [1.6.0]: https://github.com/mfikes/cljs-bean/compare/1.5.0...1.6.0

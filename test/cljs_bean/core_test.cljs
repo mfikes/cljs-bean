@@ -1261,6 +1261,33 @@
   (is (vector? (->clj #js [1])))
   (is (recursive-bean? (->clj #js {:a 1}))))
 
+(defrecord Foo [x])
+
+(defn foo-transform [x]
+  (when (instance? Foo x)
+    (:x x)))
+
+(deftest ->clj-keyword-conversion-control-test
+  (let [js #js [#js {:a 1, "a/b" 2, "d" 3 "v" #js [#js {:c 2 "d" 4 "x/y" 7}]}]]
+    (is (= [{:a 1, :a/b 2, :d 3, :v [{:c 2, :d 4, :x/y 7}]}]
+           (->clj js)))
+    (is (= 7 (get-in (->clj js) [0 :v 0 :x/y])))
+    (is (= [{"a" 1, "a/b" 2, "d" 3, "v" [{"c" 2, "d" 4, "x/y" 7}]}]
+           (->clj js :keywordize-keys false)))
+    (is (= 7 (get-in (->clj js :keywordize-keys false) [0 "v" 0 "x/y"])))
+    (is (= [{:a 1, "a/b" 2, :d 3, :v [{:c 2, :d 4, "x/y" 7}]}]
+           (->clj js :prop->key prop->key :key->prop key->prop)))
+    (is (= 7 (get-in (->clj js :prop->key prop->key :key->prop key->prop) [0 :v 0 "x/y"])))))
+
+(deftest ->clj-transform-test
+  (is (= [{:foo "a", :num 3}]
+         (->clj #js [#js {:foo (->Foo "a"), :num 3}] :transform foo-transform))))
+
+(deftest ->js-keyword-conversion-control-test
+  (let [clj {:a/b 1}]
+    (is (= clj (->clj (->js clj))))
+    (is (= {:b 1} (->clj (->js clj :key->prop name))))))
+
 (defspec roundtrip-1
   100
   (prop/for-all [j (gen/fmap ->js gen/any-equatable)]
@@ -1313,14 +1340,11 @@
   (is (not (array-vector? (persistent! (conj! (transient (->clj #js [])) {:x 2})))))
   (is (not (array-vector? (persistent! (assoc! (transient (->clj #js [1])) 0 {:x 2}))))))
 
-(defrecord Foo [x])
-
 (deftest issue-67-test
   (is (= {:foo "a", :num 3}
         (bean #js {:foo (->Foo "a"), :num 3}
           :recursive true
-          :transform (fn [x]
-                       (cond-> x (instance? Foo x) (:x x)))))))
+          :transform foo-transform))))
 
 (deftest issue-86-test
   (let [clj-obj (->clj #js {:coll #js [#js {:id "foo"}]})]
