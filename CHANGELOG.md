@@ -5,27 +5,27 @@ All notable changes to this project will be documented in this file. This change
 ### Added
 - Keyword conversion control in ->clj and ->js ([#91](https://github.com/mfikes/cljs-bean/issues/91))
 
-## [1.8.0]
+## [1.8.0] - 2022-01-08
 ### Fixed
 - Fix vector shapshot when adding non-primitives ([#87](https://github.com/mfikes/cljs-bean/issues/87))
 
-## [1.7.0]
+## [1.7.0] - 2021-04-25
 ### Changed
 - Avoid `contains?` in `-contains-key?` ([#79](https://github.com/mfikes/cljs-bean/issues/79))
 
-## [1.6.0]
+## [1.6.0] - 2020-07-26
 ### Added
 - Make JavaScript -> ClojureScript be user-hookable ([#67](https://github.com/mfikes/cljs-bean/issues/67))
 
-## [1.5.0]
+## [1.5.0] - 2019-09-27
 ### Changed
 - Add fast paths for primitive values ([#73](https://github.com/mfikes/cljs-bean/issues/73))
 
-## [1.4.0]
+## [1.4.0] - 2019-08-17
 ### Fixed
 - Writing `->clj` to transit doesn't work ([#70](https://github.com/mfikes/cljs-bean/issues/70))
 
-## [1.3.0]
+## [1.3.0] - 2019-07-09
 ### Fixed
 - Can assoc map or vector while remaining a bean ([#68](https://github.com/mfikes/cljs-bean/issues/68))
 
