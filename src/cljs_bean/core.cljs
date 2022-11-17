@@ -7,17 +7,20 @@
 (declare ArrayVector)
 (declare ->clj)
 
+(defrecord TransformContext
+    [prop key nth])
+
 (def ^:private lookup-sentinel #js {})
 
-(defn- primitive? [x]
+(defn primitive? [x]
   (or (number? x)
       (string? x)
       (boolean? x)
       (nil? x)))
 
-(defn- ->val [x prop->key key->prop transform]
+(defn- ->val [x prop->key key->prop transform ctx]
   (if-some [transformed (when (some? transform)
-                          (transform x))]
+                          (transform x ctx))]
     transformed
     (cond
       (primitive? x) x
@@ -36,19 +39,24 @@
 
 (defn- snapshot [x prop->key key->prop transform recursive?]
   (let [result (volatile! (transient empty-map))]
-    (gobj/forEach x (fn [v k _] (vswap! result assoc! (prop->key k)
-                                  (cond-> v
-                                    recursive? (->val prop->key key->prop transform)))))
+    (gobj/forEach x (fn [v p _]
+                      (let [k (prop->key p)]
+                        (vswap! result assoc! k
+                                (cond-> v
+                                  recursive? (->val prop->key key->prop transform
+                                                    (TransformContext. p k nil)))))))
     (persistent! @result)))
 
 (defn- snapshot-arr [arr]
   (vec (amap arr idx ret (->clj (aget arr idx)))))
 
 (defn- indexed-entry [obj prop->key key->prop transform ^boolean recursive? arr i]
-  (let [prop (aget arr i)]
-    (MapEntry. (prop->key prop)
+  (let [prop (aget arr i)
+        k    (prop->key prop)]
+    (MapEntry. k
       (cond-> (unchecked-get obj prop)
-        recursive? (->val prop->key key->prop transform))
+        recursive? (->val prop->key key->prop transform
+                          (TransformContext. prop k nil)))
       nil)))
 
 (defn- compatible-key? [k prop->key]
@@ -74,15 +82,19 @@
   ILookup
   (-lookup [_ k]
     (if editable?
-      (cond-> (unchecked-get obj (key->prop k))
-        recursive? (->val prop->key key->prop transform))
+      (let [p (key->prop k)]
+        (cond-> (unchecked-get obj p)
+          recursive? (->val prop->key key->prop transform
+                            (TransformContext. p k nil))))
       (throw (js/Error. "lookup after persistent!"))))
   (-lookup [_ k not-found]
     (if editable?
-      (let [ret (gobj/get obj (key->prop k) not-found)]
+      (let [p   (key->prop k)
+            ret (gobj/get obj p not-found)]
         (cond-> ret
           (and recursive? (not (identical? ret not-found)))
-          (->val prop->key key->prop transform)))
+          (->val prop->key key->prop transform
+                 (TransformContext. p k nil))))
       (throw (js/Error. "lookup after persistent!"))))
 
   ICounted
@@ -125,15 +137,19 @@
   IFn
   (-invoke [_ k]
     (if editable?
-      (cond-> (unchecked-get obj (key->prop k))
-        recursive? (->val prop->key key->prop transform))
+      (let [p (key->prop k)]
+        (cond-> (unchecked-get obj p)
+          recursive? (->val prop->key key->prop transform
+                            (TransformContext. p k nil))))
       (throw (js/Error. "lookup after persistent!"))))
   (-invoke [_ k not-found]
     (if editable?
-      (let [ret (gobj/get obj (key->prop k) not-found)]
+      (let [p   (key->prop k)
+            ret (gobj/get obj p not-found)]
         (cond-> ret
           (and recursive? (not (identical? ret not-found)))
-          (->val prop->key key->prop transform)))
+          (->val prop->key key->prop transform
+                 (TransformContext. p k nil))))
       (throw (js/Error. "lookup after persistent!")))))
 
 (deftype ^:private BeanIterator [obj prop->key key->prop transform ^boolean recursive? arr ^:mutable i cnt]
@@ -226,7 +242,7 @@
   (-pr-writer [coll writer opts]
     (pr-sequential-writer writer pr-writer "(" " " ")" opts coll)))
 
-(deftype ^:private Bean [meta obj prop->key key->prop transform ^boolean recursive?
+(deftype Bean [meta obj prop->key key->prop transform ^boolean recursive?
                          ^:mutable __arr ^:mutable __cnt ^:mutable __hash]
   Object
   (toString [coll]
@@ -300,9 +316,11 @@
 
   IFind
   (-find [_ k]
-    (let [v (gobj/get obj (key->prop k) lookup-sentinel)]
+    (let [p (key->prop k)
+          v (gobj/get obj p lookup-sentinel)]
       (when-not (identical? v lookup-sentinel)
-        (MapEntry. k (cond-> v recursive? (->val prop->key key->prop transform)) nil))))
+        (MapEntry. k (cond-> v recursive? (->val prop->key key->prop transform
+                                                 (TransformContext. p k nil))) nil))))
 
   IMap
   (-dissoc [_ k]
@@ -320,22 +338,28 @@
 
   ILookup
   (-lookup [_ k]
-    (cond-> (unchecked-get obj (key->prop k))
-      recursive? (->val prop->key key->prop transform)))
+    (let [p (key->prop k)]
+      (cond-> (unchecked-get obj p)
+        recursive? (->val prop->key key->prop transform
+                          (TransformContext. p k nil)))))
   (-lookup [_ k not-found]
-    (let [ret (gobj/get obj (key->prop k) not-found)]
+    (let [p   (key->prop k)
+          ret (gobj/get obj p not-found)]
       (cond-> ret
         (and recursive? (not (identical? ret not-found)))
-        (->val prop->key key->prop transform))))
+        (->val prop->key key->prop transform
+               (TransformContext. p k nil)))))
 
   IKVReduce
   (-kv-reduce [_ f init]
     (try
       (let [result (volatile! init)]
         (gobj/forEach obj
-          (fn [v k _]
-            (let [r (vswap! result f (prop->key k)
-                      (cond-> v recursive? (->val prop->key key->prop transform)))]
+          (fn [v p _]
+            (let [k (prop->key p)
+                  r (vswap! result f k
+                            (cond-> v recursive? (->val prop->key key->prop transform
+                                                        (TransformContext. p k nil))))]
               (when (reduced? r) (throw r)))))
         @result)
       (catch :default x
@@ -349,14 +373,18 @@
 
   IFn
   (-invoke [_ k]
-    (cond-> (unchecked-get obj (key->prop k))
-      recursive? (->val prop->key key->prop transform)))
+    (let [p (key->prop k)]
+      (cond-> (unchecked-get obj p)
+        recursive? (->val prop->key key->prop transform
+                          (TransformContext. p k nil)))))
 
   (-invoke [_ k not-found]
-    (let [ret (gobj/get obj (key->prop k) not-found)]
+    (let [p   (key->prop k)
+          ret (gobj/get obj p not-found)]
       (cond-> ret
         (and recursive? (not (identical? ret not-found)))
-        (->val prop->key key->prop transform))))
+        (->val prop->key key->prop transform
+               (TransformContext. p k nil)))))
 
   IEditableCollection
   (-as-transient [_]
@@ -423,7 +451,8 @@
   IIndexed
   (-nth [_ n]
     (if editable?
-      (->val (aget arr n) prop->key key->prop transform)
+      (->val (aget arr n) prop->key key->prop transform
+             (TransformContext. nil nil nth))
       (throw (js/Error. "nth after persistent!"))))
 
   (-nth [coll n not-found]
@@ -450,7 +479,8 @@
   (hasNext [_]
     (< i cnt))
   (next [_]
-    (let [ret (->val (aget arr i) prop->key key->prop transform)]
+    (let [ret (->val (aget arr i) prop->key key->prop transform
+                     (TransformContext. nil nil i))]
       (set! i (inc i))
       ret)))
 
@@ -485,7 +515,8 @@
 
   ASeq
   ISeq
-  (-first [_] (->val (aget arr i) prop->key key->prop transform))
+  (-first [_] (->val (aget arr i) prop->key key->prop transform
+                     (TransformContext. nil nil i)))
   (-rest [_] (if (< (inc i) (alength arr))
                (ArrayVectorSeq. prop->key key->prop transform arr (inc i) nil)
                ()))
@@ -503,12 +534,14 @@
   (-nth [_ n]
     (let [i (+ n i)]
       (if (and (<= 0 i) (< i (alength arr)))
-        (->val (aget arr i) prop->key key->prop transform)
+        (->val (aget arr i) prop->key key->prop transform
+               (TransformContext. nil nil i))
         (throw (js/Error. "Index out of bounds")))))
   (-nth [_ n not-found]
     (let [i (+ n i)]
       (if (and (<= 0 i) (< i (alength arr)))
-        (->val (aget arr i) prop->key key->prop transform)
+        (->val (aget arr i) prop->key key->prop transform
+               (TransformContext. nil nil i))
         not-found)))
 
   ISequential
@@ -535,7 +568,7 @@
   (-pr-writer [coll writer opts]
     (pr-sequential-writer writer pr-writer "(" " " ")" opts coll)))
 
-(deftype ^:private ArrayVector [meta prop->key key->prop transform arr ^:mutable __hash]
+(deftype ArrayVector [meta prop->key key->prop transform arr ^:mutable __hash]
   Object
   (toString [coll]
     (pr-str* coll))
@@ -606,11 +639,13 @@
   IIndexed
   (-nth [coll n]
     (if (and (<= 0 n) (< n (alength arr)))
-      (->val (aget arr n) prop->key key->prop transform)
+      (->val (aget arr n) prop->key key->prop transform
+             (TransformContext. nil nil n))
       (throw (js/Error. (str "No item " n " in vector of length " (alength arr))))))
   (-nth [coll n not-found]
     (if (and (<= 0 n) (< n (alength arr)))
-      (->val (aget arr n) prop->key key->prop transform)
+      (->val (aget arr n) prop->key key->prop transform
+             (TransformContext. nil nil n))
       not-found))
 
   ILookup
@@ -626,7 +661,8 @@
   IFind
   (-find [coll n]
     (when (and (<= 0 n) (< n (alength arr)))
-      (MapEntry. n (->val (aget arr n) prop->key key->prop transform) nil)))
+      (MapEntry. n (->val (aget arr n) prop->key key->prop transform
+                          (TransformContext. nil nil n)) nil)))
 
   IVector
   (-assoc-n [coll n val]
@@ -656,7 +692,8 @@
         (let [len  (alength arr)
               init (loop [j 0 init init]
                      (if (< j len)
-                       (let [init (f init (+ j i) (->val (aget arr j) prop->key key->prop transform))]
+                       (let [init (f init (+ j i) (->val (aget arr j) prop->key key->prop transform
+                                                         (TransformContext. nil nil j)))]
                          (if (reduced? init)
                            init
                            (recur (inc j) init)))
@@ -759,18 +796,18 @@
   converted from JavaScript to ClojureScript. This function should return nil
   if no conversion is to be performed, thus allowing default logic to be applied."
   ([x]
-   (->val x keyword default-key->prop nil))
+   (->val x keyword default-key->prop nil nil))
   ([x & opts]
    (let [{:keys [keywordize-keys prop->key key->prop transform]} opts]
      (cond
        (false? keywordize-keys)
-       (->val x identity identity transform)
+       (->val x identity identity transform nil)
 
        (and (some? prop->key) (some? key->prop))
-       (->val x prop->key key->prop transform)
+       (->val x prop->key key->prop transform nil)
 
        :else
-       (->val x keyword default-key->prop transform)))))
+       (->val x keyword default-key->prop transform nil)))))
 
 (defn ->js
   "Recursively converts ClojureScript values to JavaScript.
