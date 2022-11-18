@@ -7,9 +7,6 @@
 (declare ArrayVector)
 (declare ->clj)
 
-(defrecord TransformContext
-    [prop key nth])
-
 (defprotocol BeanContext
   (keywords? [_])
   (key->prop [_ key'])
@@ -721,45 +718,39 @@
     (keywords? [_] true)
     (key->prop [_ x] (default-key->prop x))
     (prop->key [_ prop] (keyword prop))
-    (transform [ctx v p k n] (->val ctx v))))
+    (transform [ctx v _ _ _] (->val ctx v))))
 
 (def ^:private identity-ctx
   (reify BeanContext
     (keywords? [_] false)
     (key->prop [_ x] x)
     (prop->key [_ prop] prop)
-    (transform [ctx v p k n] (->val ctx v))))
+    (transform [ctx v _ _ _] (->val ctx v))))
 
-(deftype Bean-K-Context [key->prop' prop->key']
+(deftype K-Transform [key->prop' prop->key']
   BeanContext
   (keywords? [_] (identical? key->prop' keyword))
   (key->prop [_ x] (key->prop' x))
   (prop->key [_ prop] (prop->key' prop))
-  (transform [ctx v p k n] (->val ctx v)))
+  (transform [ctx v _ _ _] (->val ctx v)))
 
-(def ^:private ->K-Context (memoize ->Bean-K-Context))
-
-(deftype Bean-V-Transform [transform']
+(deftype V-Transform [transform']
   BeanContext
   (keywords? [_] false)
   (key->prop [_ x] x)
   (prop->key [_ prop] prop)
-  (transform [ctx v p k n]
-    (if-some [transformed (transform' v (TransformContext. p k n))] transformed
+  (transform [ctx v _ _ _]
+    (if-some [transformed (transform' v)] transformed
       #_else (->val ctx v))))
 
-(def ^:private ->V-Transform (memoize ->Bean-K-Context))
-
-(deftype Bean-KV-Transform [key->prop' prop->key' transform']
+(deftype KV-Transform [key->prop' prop->key' transform']
   BeanContext
-  (keywords? [_] (identical? key->prop' keyword))
+  (keywords? [_] (identical? prop->key' keyword))
   (key->prop [_ x] (key->prop' x))
   (prop->key [_ prop] (prop->key' prop))
-  (transform [ctx v p k n]
-    (if-some [transformed (transform' v (TransformContext. p k n))]
+  (transform [ctx v _ _ _]
+    (if-some [transformed (transform' v)]
       transformed #_else (->val ctx v))))
-
-(def ^:private ->KV-Transform (memoize ->Bean-KV-Transform))
 
 (defn bean-context [{:keys [prop->key key->prop transform keywordize-keys]}]
   (if (nil? transform)
@@ -768,7 +759,7 @@
       , identity-ctx
 
       (and (some? prop->key) (some? key->prop))
-      , (->K-Context key->prop prop->key)
+      , (->K-Transform key->prop prop->key)
 
       :else
       , keywordize-ctx)
@@ -800,7 +791,7 @@
   ([x]
    (Bean. nil x keywordize-ctx false nil nil nil))
   ([x & {:keys [context recursive] :as opts}]
-   (Bean. nil x (if (some? context) context (bean-context opts)) (boolean recursive) nil nil nil)))
+   (Bean. nil x (or context (bean-context opts)) (boolean recursive) nil nil nil)))
 
 (defn bean?
   "Returns true if x is a bean."
@@ -830,9 +821,8 @@
   if no conversion is to be performed, thus allowing default logic to be applied."
   ([x]
    (->val keywordize-ctx x))
-  ([x & opts]
-   (let [ctx (or (:context opts) (bean-context opts))]
-     (->val ctx x))))
+  ([x & {:keys [context] :as opts}]
+   (->val (or context (bean-context opts)) x)))
 
 (defn ->js
   "Recursively converts ClojureScript values to JavaScript.

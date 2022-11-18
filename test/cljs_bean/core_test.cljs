@@ -1263,7 +1263,7 @@
 
 (defrecord Foo [x])
 
-(defn foo-transform [x _ctx]
+(defn foo-transform [x]
   (when (instance? Foo x)
     (:x x)))
 
