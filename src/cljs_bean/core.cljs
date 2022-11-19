@@ -7,23 +7,19 @@
 (declare ArrayVector)
 (declare ->clj)
 
+(defprotocol BeanContext
+  (keywords? [_])
+  (key->prop [_ key'])
+  (prop->key [_ prop])
+  (transform [_ v p k n]))
+
 (def ^:private lookup-sentinel #js {})
 
-(defn- primitive? [x]
+(defn primitive? [x]
   (or (number? x)
       (string? x)
       (boolean? x)
       (nil? x)))
-
-(defn- ->val [x prop->key key->prop transform]
-  (if-some [transformed (when (some? transform)
-                          (transform x))]
-    transformed
-    (cond
-      (primitive? x) x
-      (object? x) (Bean. nil x prop->key key->prop transform true nil nil nil)
-      (array? x) (ArrayVector. nil prop->key key->prop transform x nil)
-      :else x)))
 
 (defn- unwrap [x]
   (cond
@@ -34,27 +30,30 @@
 
 (def ^:private empty-map (.. js/cljs -core -PersistentArrayMap -EMPTY))
 
-(defn- snapshot [x prop->key key->prop transform recursive?]
+(defn- snapshot [x ctx recursive?]
   (let [result (volatile! (transient empty-map))]
-    (gobj/forEach x (fn [v k _] (vswap! result assoc! (prop->key k)
-                                  (cond-> v
-                                    recursive? (->val prop->key key->prop transform)))))
+    (gobj/forEach x (fn [v p _]
+                      (let [k (prop->key ctx p)]
+                        (vswap! result assoc! k
+                                (if recursive? (transform ctx v p k nil) #_else v)))))
     (persistent! @result)))
 
 (defn- snapshot-arr [arr]
   (vec (amap arr idx ret (->clj (aget arr idx)))))
 
-(defn- indexed-entry [obj prop->key key->prop transform ^boolean recursive? arr i]
-  (let [prop (aget arr i)]
-    (MapEntry. (prop->key prop)
-      (cond-> (unchecked-get obj prop)
-        recursive? (->val prop->key key->prop transform))
+(defn- indexed-entry [obj ctx ^boolean recursive? arr i]
+  (let [prop (aget arr i)
+        k    (prop->key ctx prop)]
+    (MapEntry. k
+      (let [v (unchecked-get obj prop)]
+        (if recursive? (transform ctx v prop k nil) 
+         #_else v))
       nil)))
 
-(defn- compatible-key? [k prop->key]
-  (or
-    (and (keyword? k) (identical? prop->key keyword))
-    (and (string? k) (identical? prop->key identity))))
+(defn- compatible-key? [k ctx]
+  (if (keywords? ctx)
+    (keyword? k)
+    (string? k)))
 
 (defn- compatible-value? [v recursive?]
   (or (primitive? v)
@@ -64,25 +63,27 @@
                      (or (object? v)
                          (array? v)))))))
 
-(defn- snapshot? [k v prop->key recursive?]
-  (not (and (compatible-key? k prop->key)
+(defn- snapshot? [k v ctx recursive?]
+  (not (and (compatible-key? k ctx)
             (compatible-value? v recursive?))))
 
 (deftype ^:private TransientBean [^:mutable ^boolean editable?
-                                  obj prop->key key->prop transform ^boolean recursive?
+                                  obj ^BeanContext ctx ^boolean recursive?
                                   ^:mutable __cnt]
   ILookup
   (-lookup [_ k]
     (if editable?
-      (cond-> (unchecked-get obj (key->prop k))
-        recursive? (->val prop->key key->prop transform))
+      (let [p (key->prop ctx k)
+            v (unchecked-get obj p)]
+        (if recursive? (transform ctx v p k nil) #_else v))
       (throw (js/Error. "lookup after persistent!"))))
   (-lookup [_ k not-found]
     (if editable?
-      (let [ret (gobj/get obj (key->prop k) not-found)]
-        (cond-> ret
-          (and recursive? (not (identical? ret not-found)))
-          (->val prop->key key->prop transform)))
+      (let [p   (key->prop ctx k)
+            ret (gobj/get obj p not-found)]
+        (if (and recursive? (not (identical? ret not-found)))
+          (transform ctx ret p k nil)
+          ret))
       (throw (js/Error. "lookup after persistent!"))))
 
   ICounted
@@ -99,16 +100,16 @@
     (if editable?
       (do
         (set! editable? false)
-        (Bean. nil obj prop->key key->prop transform recursive? nil __cnt nil))
+        (Bean. nil obj ctx recursive? nil __cnt nil))
       (throw (js/Error. "persistent! called twice"))))
 
   ITransientAssociative
   (-assoc! [tcoll k v]
     (if editable?
-      (if (snapshot? k v prop->key recursive?)
-        (-assoc! (transient (snapshot obj prop->key key->prop transform recursive?)) k v)
+      (if (snapshot? k v ctx recursive?)
+        (-assoc! (transient (snapshot obj ctx recursive?)) k v)
         (do
-          (unchecked-set obj (key->prop k) (cond-> v recursive? unwrap))
+          (unchecked-set obj (key->prop ctx k) (cond-> v recursive? unwrap))
           (set! __cnt nil)
           tcoll))
       (throw (js/Error. "assoc! after persistent!"))))
@@ -117,7 +118,7 @@
   (-dissoc! [tcoll k]
     (if editable?
       (do
-        (js-delete obj (key->prop k))
+        (js-delete obj (key->prop ctx k))
         (set! __cnt nil)
         tcoll)
       (throw (js/Error. "dissoc! after persistent!"))))
@@ -125,27 +126,29 @@
   IFn
   (-invoke [_ k]
     (if editable?
-      (cond-> (unchecked-get obj (key->prop k))
-        recursive? (->val prop->key key->prop transform))
+      (let [p (key->prop ctx k)
+            v (unchecked-get obj p)]
+        (if recursive? (transform ctx v p k nil)
+            #_else v))
       (throw (js/Error. "lookup after persistent!"))))
   (-invoke [_ k not-found]
     (if editable?
-      (let [ret (gobj/get obj (key->prop k) not-found)]
-        (cond-> ret
-          (and recursive? (not (identical? ret not-found)))
-          (->val prop->key key->prop transform)))
+      (let [p   (key->prop ctx k)
+            ret (gobj/get obj p not-found)]
+        (if (and recursive? (not (identical? ret not-found))) (transform ctx ret p k nil)
+            #_else ret))
       (throw (js/Error. "lookup after persistent!")))))
 
-(deftype ^:private BeanIterator [obj prop->key key->prop transform ^boolean recursive? arr ^:mutable i cnt]
+(deftype ^:private BeanIterator [obj ctx ^boolean recursive? arr ^:mutable i cnt]
   Object
   (hasNext [_]
     (< i cnt))
   (next [_]
-    (let [ret (indexed-entry obj prop->key key->prop transform recursive? arr i)]
+    (let [ret (indexed-entry obj ctx recursive? arr i)]
       (set! i (inc i))
       ret)))
 
-(deftype ^:private BeanSeq [obj prop->key key->prop transform ^boolean recursive? arr i meta]
+(deftype ^:private BeanSeq [obj ctx ^boolean recursive? arr i meta]
   Object
   (toString [coll]
     (pr-str* coll))
@@ -161,7 +164,7 @@
     (core/-lastIndexOf coll x start))
 
   ICloneable
-  (-clone [_] (BeanSeq. obj prop->key key->prop transform recursive? arr i meta))
+  (-clone [_] (BeanSeq. obj ctx recursive? arr i meta))
 
   ISeqable
   (-seq [this] this)
@@ -172,18 +175,18 @@
   (-with-meta [coll new-meta]
     (if (identical? new-meta meta)
       coll
-      (BeanSeq. obj prop->key key->prop transform recursive? arr i new-meta)))
+      (BeanSeq. obj ctx recursive? arr i new-meta)))
 
   ASeq
   ISeq
-  (-first [_] (indexed-entry obj prop->key key->prop transform recursive? arr i))
+  (-first [_] (indexed-entry obj ctx recursive? arr i))
   (-rest [_] (if (< (inc i) (alength arr))
-               (BeanSeq. obj prop->key key->prop transform recursive? arr (inc i) nil)
+               (BeanSeq. obj ctx recursive? arr (inc i) nil)
                ()))
 
   INext
   (-next [_] (if (< (inc i) (alength arr))
-               (BeanSeq. obj prop->key key->prop transform recursive? arr (inc i) nil)
+               (BeanSeq. obj ctx recursive? arr (inc i) nil)
                nil))
 
   ICounted
@@ -194,12 +197,12 @@
   (-nth [_ n]
     (let [i (+ n i)]
       (if (and (<= 0 i) (< i (alength arr)))
-        (indexed-entry obj prop->key key->prop transform recursive? arr i)
+        (indexed-entry obj ctx recursive? arr i)
         (throw (js/Error. "Index out of bounds")))))
   (-nth [_ n not-found]
     (let [i (+ n i)]
       (if (and (<= 0 i) (< i (alength arr)))
-        (indexed-entry obj prop->key key->prop transform recursive? arr i)
+        (indexed-entry obj ctx recursive? arr i)
         not-found)))
 
   ISequential
@@ -226,7 +229,7 @@
   (-pr-writer [coll writer opts]
     (pr-sequential-writer writer pr-writer "(" " " ")" opts coll)))
 
-(deftype ^:private Bean [meta obj prop->key key->prop transform ^boolean recursive?
+(deftype Bean [meta obj ^BeanContext ctx ^boolean recursive?
                          ^:mutable __arr ^:mutable __cnt ^:mutable __hash]
   Object
   (toString [coll]
@@ -249,13 +252,13 @@
       (f v k)))
 
   ICloneable
-  (-clone [_] (Bean. meta obj prop->key key->prop transform recursive? __arr __cnt __hash))
+  (-clone [_] (Bean. meta obj ctx recursive? __arr __cnt __hash))
 
   IWithMeta
   (-with-meta [coll new-meta]
     (if (identical? new-meta meta)
       coll
-      (Bean. new-meta obj prop->key key->prop transform recursive? __arr __cnt __hash)))
+      (Bean. new-meta obj ctx recursive? __arr __cnt __hash)))
 
   IMeta
   (-meta [_] meta)
@@ -265,7 +268,7 @@
     (core/PersistentArrayMap-conj coll entry))
 
   IEmptyableCollection
-  (-empty [_] (Bean. meta #js {} prop->key key->prop transform recursive? #js []  0 nil))
+  (-empty [_] (Bean. meta #js {} ctx recursive? #js []  0 nil))
 
   IEquiv
   (-equiv [coll other]
@@ -278,36 +281,37 @@
   (-iterator [coll]
     (when (nil? __arr)
       (set! __arr (js-keys obj)))
-    (BeanIterator. obj prop->key key->prop transform recursive? __arr 0 (-count coll)))
+    (BeanIterator. obj ctx recursive? __arr 0 (-count coll)))
 
   ISeqable
   (-seq [_]
     (when (nil? __arr)
       (set! __arr (js-keys obj)))
     (when (pos? (alength __arr))
-      (BeanSeq. obj prop->key key->prop transform recursive? __arr 0 nil)))
+      (BeanSeq. obj ctx recursive? __arr 0 nil)))
 
   IAssociative
   (-assoc [_ k v]
-    (if (snapshot? k v prop->key recursive?)
-      (-assoc (with-meta (snapshot obj prop->key key->prop transform recursive?) meta) k v)
+    (if (snapshot? k v ctx recursive?)
+      (-assoc (with-meta (snapshot obj ctx recursive?) meta) k v)
       (Bean. meta
-        (doto (gobj/clone obj) (unchecked-set (key->prop k) (cond-> v recursive? unwrap)))
-        prop->key key->prop transform recursive? nil nil nil)))
+        (doto (gobj/clone obj) (unchecked-set (key->prop ctx k) (cond-> v recursive? unwrap)))
+        ctx recursive? nil nil nil)))
 
   (-contains-key? [coll k]
     (not (identical? (-lookup coll k lookup-sentinel) lookup-sentinel)))
 
   IFind
   (-find [_ k]
-    (let [v (gobj/get obj (key->prop k) lookup-sentinel)]
+    (let [p (key->prop ctx k)
+          v (gobj/get obj p lookup-sentinel)]
       (when-not (identical? v lookup-sentinel)
-        (MapEntry. k (cond-> v recursive? (->val prop->key key->prop transform)) nil))))
+        (MapEntry. k (if recursive? (transform ctx v p k nil) #_else v) nil))))
 
   IMap
   (-dissoc [_ k]
-    (Bean. meta (doto (gobj/clone obj) (js-delete (key->prop k)))
-      prop->key key->prop transform recursive? nil nil nil))
+    (Bean. meta (doto (gobj/clone obj) (js-delete (key->prop ctx k)))
+      ctx recursive? nil nil nil))
 
   ICounted
   (-count [_]
@@ -320,22 +324,24 @@
 
   ILookup
   (-lookup [_ k]
-    (cond-> (unchecked-get obj (key->prop k))
-      recursive? (->val prop->key key->prop transform)))
+    (let [p (key->prop ctx k)
+          v (unchecked-get obj p)]
+      (if recursive? (transform ctx v p k nil) #_else v)))
   (-lookup [_ k not-found]
-    (let [ret (gobj/get obj (key->prop k) not-found)]
-      (cond-> ret
-        (and recursive? (not (identical? ret not-found)))
-        (->val prop->key key->prop transform))))
+    (let [p   (key->prop ctx k)
+          ret (gobj/get obj p not-found)]
+      (if (and recursive? (not (identical? ret not-found))) (transform ctx ret p k nil)
+          #_else ret)))
 
   IKVReduce
   (-kv-reduce [_ f init]
     (try
       (let [result (volatile! init)]
         (gobj/forEach obj
-          (fn [v k _]
-            (let [r (vswap! result f (prop->key k)
-                      (cond-> v recursive? (->val prop->key key->prop transform)))]
+          (fn [v p _]
+            (let [k (prop->key ctx p)
+                  r (vswap! result f k
+                            (if recursive? (transform ctx v p k nil) #_else v))]
               (when (reduced? r) (throw r)))))
         @result)
       (catch :default x
@@ -349,25 +355,26 @@
 
   IFn
   (-invoke [_ k]
-    (cond-> (unchecked-get obj (key->prop k))
-      recursive? (->val prop->key key->prop transform)))
+    (let [p (key->prop ctx k)
+          v (unchecked-get obj p)]
+      (if recursive? (transform ctx v p k nil) #_else v)))
 
   (-invoke [_ k not-found]
-    (let [ret (gobj/get obj (key->prop k) not-found)]
-      (cond-> ret
-        (and recursive? (not (identical? ret not-found)))
-        (->val prop->key key->prop transform))))
+    (let [p   (key->prop ctx k)
+          ret (gobj/get obj p not-found)]
+      (if (and recursive? (not (identical? ret not-found))) (transform ctx ret p k nil)
+          #_else ret)))
 
   IEditableCollection
   (-as-transient [_]
-    (TransientBean. true (gobj/clone obj) prop->key key->prop transform recursive? __cnt))
+    (TransientBean. true (gobj/clone obj) ctx recursive? __cnt))
 
   IPrintWithWriter
   (-pr-writer [coll writer opts]
     (print-map coll pr-writer writer opts)))
 
 (deftype ^:private TransientArrayVector [^:mutable ^boolean editable?
-                                         ^:mutable arr prop->key key->prop transform]
+                                         ^:mutable arr ctx]
   ITransientCollection
   (-conj! [tcoll o]
     (if editable?
@@ -382,7 +389,7 @@
     (if editable?
       (do
         (set! editable? false)
-        (ArrayVector. nil prop->key key->prop transform arr nil))
+        (ArrayVector. nil ctx arr nil))
       (throw (js/Error. "persistent! called twice"))))
 
   ITransientAssociative
@@ -423,7 +430,7 @@
   IIndexed
   (-nth [_ n]
     (if editable?
-      (->val (aget arr n) prop->key key->prop transform)
+      (transform ctx (aget arr n) nil nil nth)
       (throw (js/Error. "nth after persistent!"))))
 
   (-nth [coll n not-found]
@@ -445,16 +452,16 @@
   (-invoke [coll k not-found]
     (-lookup coll k not-found)))
 
-(deftype ^:private ArrayVectorIterator [prop->key key->prop transform arr ^:mutable i cnt]
+(deftype ^:private ArrayVectorIterator [ctx arr ^:mutable i cnt]
   Object
   (hasNext [_]
     (< i cnt))
   (next [_]
-    (let [ret (->val (aget arr i) prop->key key->prop transform)]
+    (let [ret (transform ctx (aget arr i) nil nil i)]
       (set! i (inc i))
       ret)))
 
-(deftype ^:private ArrayVectorSeq [prop->key key->prop transform arr i meta]
+(deftype ^:private ArrayVectorSeq [ctx arr i meta]
   Object
   (toString [coll]
     (pr-str* coll))
@@ -470,7 +477,7 @@
     (core/-lastIndexOf coll x start))
 
   ICloneable
-  (-clone [_] (ArrayVectorSeq. prop->key key->prop transform arr i meta))
+  (-clone [_] (ArrayVectorSeq. ctx arr i meta))
 
   ISeqable
   (-seq [this] this)
@@ -481,18 +488,18 @@
   (-with-meta [coll new-meta]
     (if (identical? new-meta meta)
       coll
-      (ArrayVectorSeq. prop->key key->prop transform arr i new-meta)))
+      (ArrayVectorSeq. ctx arr i new-meta)))
 
   ASeq
   ISeq
-  (-first [_] (->val (aget arr i) prop->key key->prop transform))
+  (-first [_] (transform ctx (aget arr i) nil nil i))
   (-rest [_] (if (< (inc i) (alength arr))
-               (ArrayVectorSeq. prop->key key->prop transform arr (inc i) nil)
+               (ArrayVectorSeq. ctx arr (inc i) nil)
                ()))
 
   INext
   (-next [_] (if (< (inc i) (alength arr))
-               (ArrayVectorSeq. prop->key key->prop transform arr (inc i) nil)
+               (ArrayVectorSeq. ctx arr (inc i) nil)
                nil))
 
   ICounted
@@ -503,12 +510,12 @@
   (-nth [_ n]
     (let [i (+ n i)]
       (if (and (<= 0 i) (< i (alength arr)))
-        (->val (aget arr i) prop->key key->prop transform)
+        (transform ctx (aget arr i) nil nil i)
         (throw (js/Error. "Index out of bounds")))))
   (-nth [_ n not-found]
     (let [i (+ n i)]
       (if (and (<= 0 i) (< i (alength arr)))
-        (->val (aget arr i) prop->key key->prop transform)
+        (transform ctx (aget arr i) nil nil i)
         not-found)))
 
   ISequential
@@ -535,7 +542,7 @@
   (-pr-writer [coll writer opts]
     (pr-sequential-writer writer pr-writer "(" " " ")" opts coll)))
 
-(deftype ^:private ArrayVector [meta prop->key key->prop transform arr ^:mutable __hash]
+(deftype ArrayVector [meta ctx arr ^:mutable __hash]
   Object
   (toString [coll]
     (pr-str* coll))
@@ -551,13 +558,13 @@
     (core/-lastIndexOf coll x start))
 
   ICloneable
-  (-clone [_] (ArrayVector. meta prop->key key->prop transform arr __hash))
+  (-clone [_] (ArrayVector. meta ctx arr __hash))
 
   IWithMeta
   (-with-meta [coll new-meta]
     (if (identical? new-meta meta)
       coll
-      (ArrayVector. new-meta prop->key key->prop transform arr __hash)))
+      (ArrayVector. new-meta ctx arr __hash)))
 
   IMeta
   (-meta [coll] meta)
@@ -572,7 +579,7 @@
         (== 1 (alength arr)) (-empty coll)
         :else
         (let [new-arr (aclone arr)]
-          (ArrayVector. meta prop->key key->prop transform
+          (ArrayVector. meta ctx
             (.slice new-arr 0 (dec (alength new-arr))) nil))))
 
   ICollection
@@ -581,11 +588,11 @@
       (-conj (snapshot-arr arr) o)
       (let [new-arr (aclone arr)]
         (unchecked-set new-arr (alength new-arr) (unwrap o))
-        (ArrayVector. meta prop->key key->prop transform new-arr nil))))
+        (ArrayVector. meta ctx new-arr nil))))
 
   IEmptyableCollection
   (-empty [coll]
-    (ArrayVector. meta prop->key key->prop transform #js [] nil))
+    (ArrayVector. meta ctx #js [] nil))
 
   ISequential
   IEquiv
@@ -598,7 +605,7 @@
   ISeqable
   (-seq [coll]
     (when (pos? (alength arr))
-      (ArrayVectorSeq. prop->key key->prop transform arr 0 nil)))
+      (ArrayVectorSeq. ctx arr 0 nil)))
 
   ICounted
   (-count [coll] (alength arr))
@@ -606,11 +613,11 @@
   IIndexed
   (-nth [coll n]
     (if (and (<= 0 n) (< n (alength arr)))
-      (->val (aget arr n) prop->key key->prop transform)
+      (transform ctx (aget arr n) nil nil n)
       (throw (js/Error. (str "No item " n " in vector of length " (alength arr))))))
   (-nth [coll n not-found]
     (if (and (<= 0 n) (< n (alength arr)))
-      (->val (aget arr n) prop->key key->prop transform)
+      (transform ctx (aget arr n) nil nil n)
       not-found))
 
   ILookup
@@ -626,7 +633,7 @@
   IFind
   (-find [coll n]
     (when (and (<= 0 n) (< n (alength arr)))
-      (MapEntry. n (->val (aget arr n) prop->key key->prop transform) nil)))
+      (MapEntry. n (transform ctx (aget arr n) nil nil n) nil)))
 
   IVector
   (-assoc-n [coll n val]
@@ -636,7 +643,7 @@
         (-assoc-n (snapshot-arr arr) n val)
         (let [new-arr (aclone arr)]
           (aset new-arr n (unwrap val))
-          (ArrayVector. meta prop->key key->prop transform new-arr nil)))
+          (ArrayVector. meta ctx new-arr nil)))
       (== n (alength arr)) (-conj coll val)
       :else (throw (js/Error. (str "Index " n " out of bounds  [0," (alength arr) "]")))))
 
@@ -656,7 +663,7 @@
         (let [len  (alength arr)
               init (loop [j 0 init init]
                      (if (< j len)
-                       (let [init (f init (+ j i) (->val (aget arr j) prop->key key->prop transform))]
+                       (let [init (f init (+ j i) (transform ctx (aget arr j) nil nil j))]
                          (if (reduced? init)
                            init
                            (recur (inc j) init)))
@@ -674,7 +681,7 @@
 
   IEditableCollection
   (-as-transient [coll]
-    (TransientArrayVector. true (aclone arr) prop->key key->prop transform))
+    (TransientArrayVector. true (aclone arr) ctx))
 
   IReversible
   (-rseq [coll]
@@ -683,7 +690,7 @@
 
   IIterable
   (-iterator [_]
-    (ArrayVectorIterator. prop->key key->prop transform arr 0 (alength arr)))
+    (ArrayVectorIterator. ctx arr 0 (alength arr)))
 
   IComparable
   (-compare [x y]
@@ -698,6 +705,69 @@
 (defn- default-key->prop [x]
   (when (keyword? x)
     (.-fqn x)))
+
+(defn- ->val [ctx x]
+  (cond
+    (primitive? x) x
+    (object? x) (Bean. nil x ctx true nil nil nil)
+    (array? x) (ArrayVector. nil ctx x nil)
+    :else x))
+
+(def ^:private keywordize-ctx
+  (reify BeanContext
+    (keywords? [_] true)
+    (key->prop [_ x] (default-key->prop x))
+    (prop->key [_ prop] (keyword prop))
+    (transform [ctx v _ _ _] (->val ctx v))))
+
+(def ^:private identity-ctx
+  (reify BeanContext
+    (keywords? [_] false)
+    (key->prop [_ x] x)
+    (prop->key [_ prop] prop)
+    (transform [ctx v _ _ _] (->val ctx v))))
+
+(deftype ^:private K-Transform [key->prop' prop->key']
+  BeanContext
+  (keywords? [_] (identical? key->prop' keyword))
+  (key->prop [_ x] (key->prop' x))
+  (prop->key [_ prop] (prop->key' prop))
+  (transform [ctx v _ _ _] (->val ctx v)))
+
+(deftype ^:private V-Transform [transform']
+  BeanContext
+  (keywords? [_] false)
+  (key->prop [_ x] x)
+  (prop->key [_ prop] prop)
+  (transform [ctx v _ _ _]
+    (if-some [transformed (transform' v)] transformed
+      #_else (->val ctx v))))
+
+(deftype ^:private KV-Transform [key->prop' prop->key' transform']
+  BeanContext
+  (keywords? [_] (identical? prop->key' keyword))
+  (key->prop [_ x] (key->prop' x))
+  (prop->key [_ prop] (prop->key' prop))
+  (transform [ctx v _ _ _]
+    (if-some [transformed (transform' v)]
+      transformed #_else (->val ctx v))))
+
+(defn bean-context [{:keys [prop->key key->prop transform keywordize-keys]}]
+  (if (nil? transform)
+    (cond
+      (false? keywordize-keys)
+      , identity-ctx
+
+      (and (some? prop->key) (some? key->prop))
+      , (->K-Transform key->prop prop->key)
+
+      :else
+      , keywordize-ctx)
+   ;else transform
+    (if (false? keywordize-keys)
+      (->V-Transform transform)
+      ;else
+      (->KV-Transform (or key->prop default-key->prop) (or prop->key keyword) transform))))
 
 (defn bean
   "Takes a JavaScript object and returns a read-only implementation of the map
@@ -717,20 +787,11 @@
 
   Calling (bean) produces an empty bean."
   ([]
-   (Bean. nil #js {} keyword default-key->prop nil false #js [] 0 nil))
+   (Bean. nil #js {} keywordize-ctx false #js [] 0 nil))
   ([x]
-   (Bean. nil x keyword default-key->prop nil false nil nil nil))
-  ([x & opts]
-   (let [{:keys [keywordize-keys prop->key key->prop transform recursive]} opts]
-     (cond
-       (false? keywordize-keys)
-       (Bean. nil x identity identity transform (boolean recursive) nil nil nil)
-
-       (and (some? prop->key) (some? key->prop))
-       (Bean. nil x prop->key key->prop transform (boolean recursive) nil nil nil)
-
-       :else
-       (Bean. nil x keyword default-key->prop transform (boolean recursive) nil nil nil)))))
+   (Bean. nil x keywordize-ctx false nil nil nil))
+  ([x & {:keys [context recursive] :as opts}]
+   (Bean. nil x (or context (bean-context opts)) (boolean recursive) nil nil nil)))
 
 (defn bean?
   "Returns true if x is a bean."
@@ -759,18 +820,9 @@
   converted from JavaScript to ClojureScript. This function should return nil
   if no conversion is to be performed, thus allowing default logic to be applied."
   ([x]
-   (->val x keyword default-key->prop nil))
-  ([x & opts]
-   (let [{:keys [keywordize-keys prop->key key->prop transform]} opts]
-     (cond
-       (false? keywordize-keys)
-       (->val x identity identity transform)
-
-       (and (some? prop->key) (some? key->prop))
-       (->val x prop->key key->prop transform)
-
-       :else
-       (->val x keyword default-key->prop transform)))))
+   (->val keywordize-ctx x))
+  ([x & {:keys [context] :as opts}]
+   (->val (or context (bean-context opts)) x)))
 
 (defn ->js
   "Recursively converts ClojureScript values to JavaScript.
