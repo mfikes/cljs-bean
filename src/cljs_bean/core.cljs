@@ -727,14 +727,14 @@
     (prop->key [_ prop] prop)
     (transform [ctx v _ _ _] (->val ctx v))))
 
-(deftype K-Transform [key->prop' prop->key']
+(deftype ^:private K-Transform [key->prop' prop->key']
   BeanContext
   (keywords? [_] (identical? key->prop' keyword))
   (key->prop [_ x] (key->prop' x))
   (prop->key [_ prop] (prop->key' prop))
   (transform [ctx v _ _ _] (->val ctx v)))
 
-(deftype V-Transform [transform']
+(deftype ^:private V-Transform [transform']
   BeanContext
   (keywords? [_] false)
   (key->prop [_ x] x)
@@ -743,7 +743,7 @@
     (if-some [transformed (transform' v)] transformed
       #_else (->val ctx v))))
 
-(deftype KV-Transform [key->prop' prop->key' transform']
+(deftype ^:private KV-Transform [key->prop' prop->key' transform']
   BeanContext
   (keywords? [_] (identical? prop->key' keyword))
   (key->prop [_ x] (key->prop' x))
